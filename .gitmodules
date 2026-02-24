@@ -1,0 +1,7 @@
+[submodule "src/hunav_sim"]
+	path = src/hunav_sim
+	url = https://github.com/robotics-upo/hunav_sim.git
+[submodule "src/people"]
+	path = src/people
+	url = https://github.com/wg-perception/people.git
+	branch = ros2
