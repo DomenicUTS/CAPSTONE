@@ -18,8 +18,7 @@
 /***********************************************************************/
 
 #include "hunav_gazebo_wrapper/WorldGenerator.hpp"
-//#include <ament_index_cpp/get_package_prefix.hpp>
-//#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <ament_index_cpp/get_package_share_directory.hpp>
 
 using namespace tinyxml2;
 
@@ -317,12 +316,21 @@ bool WorldGenerator::processXML()
 {
   // std::cout << base_world_ << std::endl;
 
-  std::string skin_filename[] = { "elegant_man.dae", "casual_man.dae", "elegant_woman.dae", "regular_man.dae",
-                                  "worker_man.dae",  "walk.dae",       "walk-green.dae",    "walk-blue.dae",
-                                  "walk-red.dae",    "stand.dae" };
-  std::string animation_filename[] = { "07_01-walk.bvh",           "69_02_walk_forward.bvh",   "137_28-normal_wait.bvh",
-                                       "142_01-walk_childist.bvh", "07_04-slow_walk.bvh",      "02_01-walk.bvh",
-                                       "142_17-walk_scared.bvh",   "17_01-walk_with_anger.bvh" };
+  // Get the package share directory for full paths to mesh/animation files
+  std::string models_path;
+  try {
+    models_path = ament_index_cpp::get_package_share_directory("hunav_gazebo_wrapper") + "/models/";
+  } catch (const std::exception& e) {
+    RCLCPP_ERROR(this->get_logger(), "Could not find hunav_gazebo_wrapper package: %s", e.what());
+    models_path = "";
+  }
+
+  std::string skin_filename[] = { models_path + "elegant_man.dae", models_path + "casual_man.dae", models_path + "elegant_woman.dae", models_path + "regular_man.dae",
+                                  models_path + "worker_man.dae",  models_path + "walk.dae",       models_path + "walk-green.dae",    models_path + "walk-blue.dae",
+                                  models_path + "walk-red.dae",    models_path + "stand.dae" };
+  std::string animation_filename[] = { models_path + "07_01-walk.bvh",           models_path + "69_02_walk_forward.bvh",   models_path + "137_28-normal_wait.bvh",
+                                       models_path + "142_01-walk_childist.bvh", models_path + "07_04-slow_walk.bvh",      models_path + "02_01-walk.bvh",
+                                       models_path + "142_17-walk_scared.bvh",   models_path + "17_01-walk_with_anger.bvh" };
 
   // load the base world file
   tinyxml2::XMLDocument doc;

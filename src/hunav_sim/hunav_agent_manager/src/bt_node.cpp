@@ -110,8 +110,8 @@ namespace hunav
       
       try {
         std::string share_dir = ament_index_cpp::get_package_share_directory(package_name);
-        std::string src_dir = share_to_src_path(share_dir);
-        bt_dir_base_ = src_dir + "/behavior_trees";
+        // Use the installed behavior_trees directory in share
+        bt_dir_base_ = share_dir + "/behavior_trees";
         RCLCPP_INFO(this->get_logger(),
                     "Found ROS2 package '%s', behavior trees will be loaded from: %s",
                     package_name.c_str(), bt_dir_base_.c_str());
