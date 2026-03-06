@@ -5,9 +5,9 @@ Ground Truth Crowd Dynamics Analyzer
 Extracts benchmark metrics from ETH/UCY pedestrian datasets for comparison
 against HuNavSim simulation runs.
 
-Datasets supported:
-  - EWAP (ETH/Hotel): obsmat.txt format with velocities
-  - UCY (Zara01/02/03, Students001/003, Uni): true_pos_.csv format
+Datasets supported (all true_pos_.csv format):
+  - ETH (Hotel, Univ)
+  - UCY (Zara01/02/03, Students001/003)
 
 Strategy
 --------
@@ -35,7 +35,7 @@ Output
 Usage
 -----
   python3 ground_truth_analysis.py                       # analyze all datasets
-  python3 ground_truth_analysis.py --dataset ewap_eth    # analyze one dataset
+  python3 ground_truth_analysis.py --dataset eth_univ    # analyze one dataset
   python3 ground_truth_analysis.py --sim-json <path>     # compare against simulation
 """
 
@@ -63,23 +63,21 @@ except ImportError:
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
 
-# Each entry: (label, relative_path, format, dt_seconds)
+# Each entry: (label, relative_path, dt_seconds)
 DATASET_REGISTRY = [
-    ("ewap_eth",   "ewap_dataset/seq_eth/obsmat.txt",   "obsmat", 0.4),
-    ("ewap_hotel", "ewap_dataset/seq_hotel/obsmat.txt",  "obsmat", 0.4),
-    ("eth_hotel",  "eth/hotel/true_pos_.csv",             "truepos", 0.4),
-    ("eth_univ",   "eth/univ/true_pos_.csv",              "truepos", 0.4),
-    ("ucy_zara01", "ucy/zara/zara01/true_pos_.csv",       "truepos", 0.4),
-    ("ucy_zara02", "ucy/zara/zara02/true_pos_.csv",       "truepos", 0.4),
-    ("ucy_zara03", "ucy/zara/zara03/true_pos_.csv",       "truepos", 0.4),
-    ("ucy_univ_s1","ucy/univ/students001/true_pos_.csv",  "truepos", 0.4),
-    ("ucy_univ_s3","ucy/univ/students003/true_pos_.csv",  "truepos", 0.4),
+    ("eth_hotel",  "eth/hotel/true_pos_.csv",             0.4),
+    ("eth_univ",   "eth/univ/true_pos_.csv",              0.4),
+    ("ucy_zara01", "ucy/zara/zara01/true_pos_.csv",       0.4),
+    ("ucy_zara02", "ucy/zara/zara02/true_pos_.csv",       0.4),
+    ("ucy_zara03", "ucy/zara/zara03/true_pos_.csv",       0.4),
+    ("ucy_univ_s1","ucy/univ/students001/true_pos_.csv",  0.4),
+    ("ucy_univ_s3","ucy/univ/students003/true_pos_.csv",  0.4),
 ]
 
-# Group annotations (EWAP only)
+# Group annotations
 GROUP_FILES = {
-    "ewap_eth":   "ewap_dataset/seq_eth/groups.txt",
-    "ewap_hotel": "ewap_dataset/seq_hotel/groups.txt",
+    "eth_univ":   "eth/univ/groups.txt",
+    "eth_hotel":  "eth/hotel/groups.txt",
 }
 
 # Collision / near-miss thresholds (meters)
@@ -102,20 +100,6 @@ class TrajectoryData:
     velocities: np.ndarray   # (N, 2) float – vx, vy in m/s  (computed if not given)
     dt: float                # seconds between consecutive frames
     groups: List[List[int]] = field(default_factory=list)  # group membership
-
-
-def load_obsmat(filepath: str, dt: float) -> TrajectoryData:
-    """Load EWAP obsmat.txt format:
-    [frame_number ped_ID pos_x pos_z pos_y v_x v_z v_y]
-    pos_z and v_z are unused (perpendicular to ground).
-    """
-    data = np.loadtxt(filepath)
-    frames = data[:, 0].astype(int)
-    ped_ids = data[:, 1].astype(int)
-    positions = data[:, [2, 4]]   # pos_x, pos_y
-    velocities = data[:, [5, 7]]  # v_x, v_y
-    return TrajectoryData(frames=frames, ped_ids=ped_ids,
-                          positions=positions, velocities=velocities, dt=dt)
 
 
 def load_truepos(filepath: str, dt: float) -> TrajectoryData:
@@ -614,7 +598,7 @@ def compute_metrics(td: TrajectoryData, dataset_name: str) -> CrowdMetrics:
 
 
 def _frame_step(unique_frames: np.ndarray) -> float:
-    """Estimate the frame step (e.g. 6 for EWAP, 10 for UCY)."""
+    """Estimate the frame step (e.g. 6 for ETH univ, 10 for UCY)."""
     if len(unique_frames) < 2:
         return 1.0
     diffs = np.diff(unique_frames)
@@ -879,7 +863,7 @@ RECOMMENDED COMPARISON STRATEGY:
 def main():
     parser = argparse.ArgumentParser(description="Ground truth crowd dynamics analysis")
     parser.add_argument("--dataset", type=str, default=None,
-                        help="Analyze only this dataset (e.g. ewap_eth, ucy_zara01)")
+                        help="Analyze only this dataset (e.g. eth_univ, ucy_zara01)")
     parser.add_argument("--sim-json", type=str, default=None,
                         help="Path to simulation metrics JSON for comparison")
     parser.add_argument("--output-dir", type=str, default=None,
@@ -894,7 +878,7 @@ def main():
     # Load and analyze datasets
     all_metrics: Dict[str, CrowdMetrics] = {}
 
-    for label, rel_path, fmt, dt in DATASET_REGISTRY:
+    for label, rel_path, dt in DATASET_REGISTRY:
         if args.dataset and args.dataset != label:
             continue
 
@@ -904,10 +888,7 @@ def main():
             continue
 
         print(f"  [LOAD] {label} ← {rel_path}")
-        if fmt == "obsmat":
-            td = load_obsmat(str(filepath), dt)
-        else:
-            td = load_truepos(str(filepath), dt)
+        td = load_truepos(str(filepath), dt)
 
         # Load groups if available
         if label in GROUP_FILES:
