@@ -122,7 +122,7 @@ def load_truepos(filepath: str, dt: float) -> TrajectoryData:
     positions = np.column_stack([x, y])
 
     # Compute velocities via finite differences per pedestrian.
-    # The frame-step varies by dataset (6 for ETH, 10 for UCY), so we detect
+    # The frame-step varies by dataset , so we detect
     # it from the data rather than hardcoding.
     unique_frames = np.unique(frames)
     median_frame_step = float(np.median(np.diff(unique_frames))) if len(unique_frames) > 1 else 1.0

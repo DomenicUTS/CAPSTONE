@@ -73,6 +73,8 @@ class HunavEvaluatorNode(Node):
             Empty, "hunav_stop_recording", self.recording_service_stop
         )
 
+        self.current_run_dir = None  # Will be set when recording starts
+
         self.agent_sub = self.create_subscription(
             Agents, "human_states", self.human_callback, 1
         )
@@ -165,6 +167,15 @@ class HunavEvaluatorNode(Node):
             )
             self.exp_tag = request.experiment_tag
             self.run_id = request.run_id
+            
+            # Set the run directory based on run_id
+            base_dir = os.path.dirname(self.get_parameter("result_file").get_parameter_value().string_value)
+            if not base_dir or base_dir == "":
+                base_dir = "."
+            self.current_run_dir = os.path.join(base_dir, f"run_{self.run_id}")
+            os.makedirs(self.current_run_dir, exist_ok=True)
+            self.get_logger().info(f"Recording to run directory: {self.current_run_dir}")
+            
             self.agents_list.clear()
             self.robot_list.clear()
             self.last_time = self.get_clock().now()
@@ -264,6 +275,10 @@ class HunavEvaluatorNode(Node):
         rclpy.logging.get_logger("hunav_evaluator").info(
             f"Metrics computed: {self.metrics_to_compute.keys()}"
         )
+        
+        # Export raw trajectories in ETH/UCY format
+        self.export_raw_trajectories()
+        
         self.store_metrics(self.result_file_path)
 
         # Now, filter according to the different behaviors
@@ -349,6 +364,53 @@ class HunavEvaluatorNode(Node):
 
         self.store_metrics(store_file)  # store the metrics in a file
 
+    def export_raw_trajectories(self):
+        """Export raw agent trajectories in ETH/UCY format (frame, ped_id, x, y).
+        
+        Saves to: run_D/true_pos_.csv where D is the run_id
+        Format matches ETH/UCY datasets so ground_truth_analysis.py can process it.
+        """
+        if not self.current_run_dir:
+            self.get_logger().warn("No run directory set. Trajectories not exported.")
+            return
+        
+        output_file = os.path.join(self.current_run_dir, "true_pos_.csv")
+        
+        # Collect all observations
+        frames_list = []
+        ped_ids_list = []
+        x_positions = []
+        y_positions = []
+        
+        frame_counter = 0
+        for agents_msg in self.agents_list:
+            for agent in agents_msg.agents:
+                # Use agent.id as pedestrian ID
+                ped_ids_list.append(agent.id)
+                frames_list.append(frame_counter)
+                x_positions.append(agent.pose.position.x)
+                y_positions.append(agent.pose.position.y)
+            frame_counter += 1
+        
+        # Write in ETH/UCY format (4 rows: frame indices, ped IDs, x coords, y coords)
+        if len(frames_list) > 0:
+            with open(output_file, 'w') as f:
+                # Row 1: Frame indices
+                f.write(','.join(map(str, frames_list)) + '\n')
+                # Row 2: Pedestrian IDs
+                f.write(','.join(map(str, ped_ids_list)) + '\n')
+                # Row 3: X positions
+                f.write(','.join(map(str, x_positions)) + '\n')
+                # Row 4: Y positions
+                f.write(','.join(map(str, y_positions)) + '\n')
+            
+            self.get_logger().info(
+                f"Raw trajectories exported to {output_file} "
+                f"({len(set(ped_ids_list))} agents, {frame_counter} frames)"
+            )
+        else:
+            self.get_logger().warn("No trajectory data collected to export")
+
     def store_metrics(self, result_file: str):
         """Store the computed metrics in CSV format.
         
@@ -418,8 +480,16 @@ class HunavEvaluatorNode(Node):
 
     @property
     def result_file_path(self):
-        """Get the result file path from the parameter."""
-        return self.get_parameter("result_file").get_parameter_value().string_value
+        """Get the result file path, placing metrics in the current run directory."""
+        base_file = self.get_parameter("result_file").get_parameter_value().string_value
+        
+        # If we're in a recording session, save to the run directory
+        if self.current_run_dir:
+            # Extract just the filename from base_file
+            filename = os.path.basename(base_file)
+            return os.path.join(self.current_run_dir, filename)
+        else:
+            return base_file
 
 
 def main(args=None):

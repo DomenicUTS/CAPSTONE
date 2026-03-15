@@ -10,7 +10,7 @@ hunav_evaluator_node:
     # If the file already exists, the file will be open
     # and a new line of results will be added at the end
     # of the file. 
-    result_file: 'metrics'
+    result_file: '/home/domenic/sfm_ws/results/baseline_run1.txt'
 
     # The list of metrics to be computed.
     metrics:
