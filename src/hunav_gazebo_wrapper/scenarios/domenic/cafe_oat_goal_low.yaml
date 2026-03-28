@@ -1,6 +1,6 @@
 hunav_loader:
   ros__parameters:
-    yaml_base_name: cafe_24agents_dense_aware
+    yaml_base_name: cafe_oat_goal_low
     simulator: Gazebo Classic
     map: cafe
     publish_people: true
@@ -65,7 +65,7 @@ hunav_loader:
       id: 1
       group_id: -1
       skin: 0
-      max_vel: 0.9289
+      max_vel: 1.0342
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -77,9 +77,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 2.38
-        obstacle_force_factor: 16.0
-        social_force_factor: 19.34
+        goal_force_factor: 1.0
+        obstacle_force_factor: 13.28
+        social_force_factor: 15.56
         other_force_factor: 20.0
       goals:
       - 10
@@ -88,7 +88,7 @@ hunav_loader:
       id: 2
       group_id: -1
       skin: 1
-      max_vel: 1.2814
+      max_vel: 1.2985
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -100,9 +100,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 2.51
-        obstacle_force_factor: 23.06
-        social_force_factor: 9.38
+        goal_force_factor: 1.0
+        obstacle_force_factor: 19.33
+        social_force_factor: 8.92
         other_force_factor: 20.0
       goals:
       - 7
@@ -111,7 +111,7 @@ hunav_loader:
       id: 3
       group_id: -1
       skin: 2
-      max_vel: 0.5031
+      max_vel: 0.7148
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -123,9 +123,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 2.62
-        obstacle_force_factor: 19.12
-        social_force_factor: 14.71
+        goal_force_factor: 1.0
+        obstacle_force_factor: 15.96
+        social_force_factor: 12.47
         other_force_factor: 20.0
       goals:
       - 10
@@ -134,7 +134,7 @@ hunav_loader:
       id: 4
       group_id: -1
       skin: 0
-      max_vel: 0.6388
+      max_vel: 0.8166
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -146,9 +146,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 2.15
-        obstacle_force_factor: 18.89
-        social_force_factor: 13.18
+        goal_force_factor: 1.0
+        obstacle_force_factor: 15.76
+        social_force_factor: 11.46
         other_force_factor: 20.0
       goals:
       - 6
@@ -157,7 +157,7 @@ hunav_loader:
       id: 5
       group_id: -1
       skin: 1
-      max_vel: 1.2309
+      max_vel: 1.2607
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -169,9 +169,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 3.45
-        obstacle_force_factor: 10.46
-        social_force_factor: 9.18
+        goal_force_factor: 1.15
+        obstacle_force_factor: 8.54
+        social_force_factor: 8.79
         other_force_factor: 20.0
       goals:
       - 5
@@ -180,7 +180,7 @@ hunav_loader:
       id: 6
       group_id: -1
       skin: 2
-      max_vel: 0.9357
+      max_vel: 1.0393
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -192,9 +192,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 3.56
-        obstacle_force_factor: 18.18
-        social_force_factor: 13.89
+        goal_force_factor: 1.22
+        obstacle_force_factor: 15.16
+        social_force_factor: 11.93
         other_force_factor: 20.0
       goals:
       - 2
@@ -203,7 +203,7 @@ hunav_loader:
       id: 7
       group_id: -1
       skin: 0
-      max_vel: 1.2932
+      max_vel: 1.3074
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -215,9 +215,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 2.96
-        obstacle_force_factor: 9.41
-        social_force_factor: 16.32
+        goal_force_factor: 1.0
+        obstacle_force_factor: 7.63
+        social_force_factor: 13.54
         other_force_factor: 20.0
       goals:
       - 6
@@ -226,7 +226,7 @@ hunav_loader:
       id: 8
       group_id: -1
       skin: 1
-      max_vel: 0.7369
+      max_vel: 0.8902
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -238,9 +238,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 3.23
-        obstacle_force_factor: 18.42
-        social_force_factor: 14.28
+        goal_force_factor: 1.02
+        obstacle_force_factor: 15.36
+        social_force_factor: 12.18
         other_force_factor: 20.0
       goals:
       - 4
@@ -249,7 +249,7 @@ hunav_loader:
       id: 9
       group_id: -1
       skin: 2
-      max_vel: 1.124
+      max_vel: 1.1805
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -261,9 +261,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 3.28
-        obstacle_force_factor: 19.28
-        social_force_factor: 15.49
+        goal_force_factor: 1.05
+        obstacle_force_factor: 16.09
+        social_force_factor: 12.99
         other_force_factor: 20.0
       goals:
       - 5
@@ -272,7 +272,7 @@ hunav_loader:
       id: 10
       group_id: -1
       skin: 0
-      max_vel: 0.9861
+      max_vel: 1.0771
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -284,9 +284,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 3.62
-        obstacle_force_factor: 24.35
-        social_force_factor: 16.26
+        goal_force_factor: 1.25
+        obstacle_force_factor: 20.45
+        social_force_factor: 13.5
         other_force_factor: 20.0
       goals:
       - 3
@@ -295,7 +295,7 @@ hunav_loader:
       id: 11
       group_id: -1
       skin: 1
-      max_vel: 0.8831
+      max_vel: 0.9998
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -307,9 +307,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 2.9
-        obstacle_force_factor: 16.86
-        social_force_factor: 14.62
+        goal_force_factor: 1.0
+        obstacle_force_factor: 14.02
+        social_force_factor: 12.41
         other_force_factor: 20.0
       goals:
       - 9
@@ -318,7 +318,7 @@ hunav_loader:
       id: 12
       group_id: -1
       skin: 2
-      max_vel: 1.108
+      max_vel: 1.1685
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -330,9 +330,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 2.47
-        obstacle_force_factor: 14.85
-        social_force_factor: 12.83
+        goal_force_factor: 1.0
+        obstacle_force_factor: 12.3
+        social_force_factor: 11.22
         other_force_factor: 20.0
       goals:
       - 7
@@ -341,7 +341,7 @@ hunav_loader:
       id: 13
       group_id: -1
       skin: 0
-      max_vel: 1.1627
+      max_vel: 1.2095
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -353,9 +353,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 3.05
-        obstacle_force_factor: 17.88
-        social_force_factor: 20.74
+        goal_force_factor: 1.0
+        obstacle_force_factor: 14.9
+        social_force_factor: 16.49
         other_force_factor: 20.0
       goals:
       - 7
@@ -364,7 +364,7 @@ hunav_loader:
       id: 14
       group_id: -1
       skin: 1
-      max_vel: 0.6239
+      max_vel: 0.8054
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -376,9 +376,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 1.99
-        obstacle_force_factor: 16.13
-        social_force_factor: 14.51
+        goal_force_factor: 1.0
+        obstacle_force_factor: 13.4
+        social_force_factor: 12.34
         other_force_factor: 20.0
       goals:
       - 6
@@ -387,7 +387,7 @@ hunav_loader:
       id: 15
       group_id: -1
       skin: 2
-      max_vel: 0.9122
+      max_vel: 1.0217
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -399,9 +399,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 3.18
-        obstacle_force_factor: 14.67
-        social_force_factor: 15.66
+        goal_force_factor: 1.0
+        obstacle_force_factor: 12.15
+        social_force_factor: 13.11
         other_force_factor: 20.0
       goals:
       - 6
@@ -410,7 +410,7 @@ hunav_loader:
       id: 16
       group_id: -1
       skin: 0
-      max_vel: 0.7535
+      max_vel: 0.9026
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -422,9 +422,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 3.48
-        obstacle_force_factor: 14.61
-        social_force_factor: 13.33
+        goal_force_factor: 1.17
+        obstacle_force_factor: 12.09
+        social_force_factor: 11.55
         other_force_factor: 20.0
       goals:
       - 3
@@ -433,7 +433,7 @@ hunav_loader:
       id: 17
       group_id: -1
       skin: 1
-      max_vel: 0.8577
+      max_vel: 0.9808
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -445,9 +445,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 2.7
-        obstacle_force_factor: 18.24
-        social_force_factor: 17.46
+        goal_force_factor: 1.0
+        obstacle_force_factor: 15.21
+        social_force_factor: 14.3
         other_force_factor: 20.0
       goals:
       - 7
@@ -456,7 +456,7 @@ hunav_loader:
       id: 18
       group_id: -1
       skin: 2
-      max_vel: 0.6695
+      max_vel: 0.8396
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -468,9 +468,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 2.58
-        obstacle_force_factor: 15.57
-        social_force_factor: 19.25
+        goal_force_factor: 1.0
+        obstacle_force_factor: 12.92
+        social_force_factor: 15.5
         other_force_factor: 20.0
       goals:
       - 9
@@ -479,7 +479,7 @@ hunav_loader:
       id: 19
       group_id: -1
       skin: 0
-      max_vel: 0.7829
+      max_vel: 0.9247
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -491,9 +491,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 2.61
-        obstacle_force_factor: 19.08
-        social_force_factor: 20.44
+        goal_force_factor: 1.0
+        obstacle_force_factor: 15.93
+        social_force_factor: 16.29
         other_force_factor: 20.0
       goals:
       - 6
@@ -502,7 +502,7 @@ hunav_loader:
       id: 20
       group_id: -1
       skin: 1
-      max_vel: 1.0617
+      max_vel: 1.1338
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -514,9 +514,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 3.57
-        obstacle_force_factor: 13.27
-        social_force_factor: 10.43
+        goal_force_factor: 1.22
+        obstacle_force_factor: 10.94
+        social_force_factor: 9.62
         other_force_factor: 20.0
       goals:
       - 1
@@ -525,7 +525,7 @@ hunav_loader:
       id: 21
       group_id: -1
       skin: 2
-      max_vel: 1.2917
+      max_vel: 1.3063
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -537,9 +537,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 3.39
-        obstacle_force_factor: 22.21
-        social_force_factor: 12.76
+        goal_force_factor: 1.12
+        obstacle_force_factor: 18.61
+        social_force_factor: 11.17
         other_force_factor: 20.0
       goals:
       - 10
@@ -548,7 +548,7 @@ hunav_loader:
       id: 22
       group_id: -1
       skin: 0
-      max_vel: 0.6626
+      max_vel: 0.8344
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -560,9 +560,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 2.69
-        obstacle_force_factor: 25.28
-        social_force_factor: 10.33
+        goal_force_factor: 1.0
+        obstacle_force_factor: 21.24
+        social_force_factor: 9.56
         other_force_factor: 20.0
       goals:
       - 9
@@ -571,7 +571,7 @@ hunav_loader:
       id: 23
       group_id: -1
       skin: 1
-      max_vel: 1.1955
+      max_vel: 1.2342
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -583,9 +583,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 4.04
-        obstacle_force_factor: 19.47
-        social_force_factor: 10.37
+        goal_force_factor: 1.5
+        obstacle_force_factor: 16.26
+        social_force_factor: 9.58
         other_force_factor: 20.0
       goals:
       - 7
@@ -594,7 +594,7 @@ hunav_loader:
       id: 24
       group_id: -1
       skin: 2
-      max_vel: 0.8148
+      max_vel: 0.9486
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -606,9 +606,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 2.42
-        obstacle_force_factor: 11.62
-        social_force_factor: 15.57
+        goal_force_factor: 1.0
+        obstacle_force_factor: 9.53
+        social_force_factor: 13.05
         other_force_factor: 20.0
       goals:
       - 10
@@ -617,7 +617,7 @@ hunav_loader:
       id: 25
       group_id: -1
       skin: 0
-      max_vel: 0.7993
+      max_vel: 0.937
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -629,9 +629,9 @@ hunav_loader:
       behavior:
         type: Regular
         configuration: 2
-        goal_force_factor: 2.88
-        obstacle_force_factor: 18.96
-        social_force_factor: 16.37
+        goal_force_factor: 1.0
+        obstacle_force_factor: 15.82
+        social_force_factor: 13.58
         other_force_factor: 20.0
       goals:
       - 3
