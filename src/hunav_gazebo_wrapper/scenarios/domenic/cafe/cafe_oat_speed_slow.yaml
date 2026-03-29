@@ -52,7 +52,7 @@ hunav_loader:
       id: 1
       group_id: -1
       skin: 0
-      max_vel: 0.545
+      max_vel: 0.7421
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -75,7 +75,7 @@ hunav_loader:
       id: 2
       group_id: -1
       skin: 1
-      max_vel: 0.529
+      max_vel: 0.7203
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -98,7 +98,7 @@ hunav_loader:
       id: 3
       group_id: -1
       skin: 2
-      max_vel: 0.754
+      max_vel: 1.0267
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -121,7 +121,7 @@ hunav_loader:
       id: 4
       group_id: -1
       skin: 0
-      max_vel: 0.7203
+      max_vel: 0.9808
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -144,7 +144,7 @@ hunav_loader:
       id: 5
       group_id: -1
       skin: 1
-      max_vel: 0.5889
+      max_vel: 0.8018
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -167,7 +167,7 @@ hunav_loader:
       id: 6
       group_id: -1
       skin: 2
-      max_vel: 0.6531
+      max_vel: 0.8892
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -190,7 +190,7 @@ hunav_loader:
       id: 7
       group_id: -1
       skin: 0
-      max_vel: 0.4797
+      max_vel: 0.6531
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -213,7 +213,7 @@ hunav_loader:
       id: 8
       group_id: -1
       skin: 1
-      max_vel: 0.4304
+      max_vel: 0.586
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -236,7 +236,7 @@ hunav_loader:
       id: 9
       group_id: -1
       skin: 2
-      max_vel: 0.6456
+      max_vel: 0.8791
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -259,7 +259,7 @@ hunav_loader:
       id: 10
       group_id: -1
       skin: 0
-      max_vel: 0.4388
+      max_vel: 0.5975
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -282,7 +282,7 @@ hunav_loader:
       id: 11
       group_id: -1
       skin: 1
-      max_vel: 0.3918
+      max_vel: 0.5335
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
@@ -305,7 +305,7 @@ hunav_loader:
       id: 12
       group_id: -1
       skin: 2
-      max_vel: 0.7063
+      max_vel: 0.9617
       radius: 0.4
       goal_radius: 0.3
       cyclic_goals: true
