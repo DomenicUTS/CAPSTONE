@@ -864,44 +864,76 @@ def main():
     parser = argparse.ArgumentParser(description="Ground truth crowd dynamics analysis")
     parser.add_argument("--dataset", type=str, default=None,
                         help="Analyze only this dataset (e.g. eth_univ, ucy_zara01)")
+    parser.add_argument("--custom-dataset", type=str, nargs=2, action="append",
+                        metavar=("NAME", "PATH"),
+                        help="Analyze a custom true_pos_.csv file (repeatable). Example: --custom-dataset run_1 /path/to/true_pos_.csv")
     parser.add_argument("--sim-json", type=str, default=None,
                         help="Path to simulation metrics JSON for comparison")
     parser.add_argument("--output-dir", type=str, default=None,
-                        help="Output directory for results (default: DATASETS/results)")
+                        help="Output directory for results (default: DATASETS/results or ./analysis_output)")
     parser.add_argument("--no-plots", action="store_true",
                         help="Skip plot generation")
+    parser.add_argument("--dt", type=float, default=0.4,
+                        help="Time delta (seconds) for custom datasets (default: 0.4)")
     args = parser.parse_args()
 
-    output_dir = Path(args.output_dir) if args.output_dir else SCRIPT_DIR / "results"
+    # Determine output directory
+    if args.custom_dataset and not args.output_dir:
+        # For custom datasets, default to ./analysis_output
+        output_dir = Path("./analysis_output")
+    elif args.output_dir:
+        output_dir = Path(args.output_dir)
+    else:
+        # For GT datasets, use DATASETS/results
+        output_dir = SCRIPT_DIR / "results"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Load and analyze datasets
     all_metrics: Dict[str, CrowdMetrics] = {}
 
-    for label, rel_path, dt in DATASET_REGISTRY:
-        if args.dataset and args.dataset != label:
-            continue
+    # If custom datasets provided, analyze them (skip registry)
+    if args.custom_dataset:
+        print(f"\n[CUSTOM ANALYSIS] Using {len(args.custom_dataset)} custom dataset(s)")
+        for label, filepath in args.custom_dataset:
+            filepath = Path(filepath)
+            if not filepath.exists():
+                print(f"  [SKIP] {label}: file not found at {filepath}")
+                continue
 
-        filepath = SCRIPT_DIR / rel_path
-        if not filepath.exists():
-            print(f"  [SKIP] {label}: file not found at {filepath}")
-            continue
+            print(f"  [LOAD] {label} ← {filepath}")
+            td = load_truepos(str(filepath), args.dt)
 
-        print(f"  [LOAD] {label} ← {rel_path}")
-        td = load_truepos(str(filepath), dt)
+            print(f"         {len(np.unique(td.ped_ids))} pedestrians, "
+                  f"{len(np.unique(td.frames))} frames")
 
-        # Load groups if available
-        if label in GROUP_FILES:
-            gpath = SCRIPT_DIR / GROUP_FILES[label]
-            if gpath.exists():
-                td.groups = load_groups(str(gpath))
-                print(f"         loaded {len(td.groups)} groups")
+            metrics = compute_metrics(td, label)
+            all_metrics[label] = metrics
+    else:
+        # Original registry-based analysis
+        for label, rel_path, dt in DATASET_REGISTRY:
+            if args.dataset and args.dataset != label:
+                continue
 
-        print(f"         {len(np.unique(td.ped_ids))} pedestrians, "
-              f"{len(np.unique(td.frames))} frames")
+            filepath = SCRIPT_DIR / rel_path
+            if not filepath.exists():
+                print(f"  [SKIP] {label}: file not found at {filepath}")
+                continue
 
-        metrics = compute_metrics(td, label)
-        all_metrics[label] = metrics
+            print(f"  [LOAD] {label} ← {rel_path}")
+            td = load_truepos(str(filepath), dt)
+
+            # Load groups if available
+            if label in GROUP_FILES:
+                gpath = SCRIPT_DIR / GROUP_FILES[label]
+                if gpath.exists():
+                    td.groups = load_groups(str(gpath))
+                    print(f"         loaded {len(td.groups)} groups")
+
+            print(f"         {len(np.unique(td.ped_ids))} pedestrians, "
+                  f"{len(np.unique(td.frames))} frames")
+
+            metrics = compute_metrics(td, label)
+            all_metrics[label] = metrics
 
     if not all_metrics:
         print("No datasets found. Check paths.")
@@ -909,7 +941,9 @@ def main():
 
     # Print summary
     print_summary(all_metrics)
-    print_interpretation()
+    if not args.custom_dataset:
+        # Only print interpretation for GT analysis
+        print_interpretation()
 
     # Save JSON (without large distribution arrays)
     json_out = {}
@@ -961,6 +995,7 @@ def main():
         plot_metrics(all_metrics, output_dir, sim_metrics)
 
     print("\nDone.")
+    print(f"Results saved to: {output_dir.resolve()}")
 
 
 if __name__ == "__main__":
