@@ -16,13 +16,12 @@ import os
 import subprocess
 
 def update_metrics_config(run_id):
-    """Update metrics.yaml to save results in the correct run directory"""
+    """Update metrics.yaml to save results in the results/ base directory"""
     # Update the installed config (what ROS actually uses)
     config_file = os.path.expanduser('~/sfm_ws_fresh/install/hunav_evaluator/share/hunav_evaluator/config/metrics.yaml')
-    result_dir = os.path.expanduser(f'~/sfm_ws_fresh/results/run_{run_id}')
     
-    # Ensure the run directory exists
-    os.makedirs(result_dir, exist_ok=True)
+    # Set result_file to just results/metrics (evaluator will add run_N/)
+    result_path = '/home/domenic/sfm_ws_fresh/results/metrics'
     
     # Update only the result_file line (preserve formatting/comments)
     with open(config_file, 'r') as f:
@@ -31,13 +30,13 @@ def update_metrics_config(run_id):
     # Find and replace the result_file line
     for i, line in enumerate(lines):
         if 'result_file:' in line:
-            lines[i] = f"    result_file: '{result_dir}/metrics'\n"
+            lines[i] = f"    result_file: '{result_path}'\n"
             break
     
     with open(config_file, 'w') as f:
         f.writelines(lines)
     
-    print(f"Updated installed metrics.yaml: result_file = {result_dir}/metrics")
+    print(f"Updated installed metrics.yaml: result_file = {result_path} (evaluator will save to run_{run_id})")
 
 class RecordingTest(Node):
     def __init__(self):
