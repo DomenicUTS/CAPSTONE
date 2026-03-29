@@ -287,7 +287,22 @@ Review comparison reports:
 - **JSON**: `simulation_analysis/comparisons/simulation_vs_ground_truth.json`
 - **Text**: `simulation_analysis/reports/comparison_report.txt`
 
-Identify which parameter(s) most improve:
+### Stage 5: Generate Overlay Plots (Optional)
+
+Visualize simulation vs ground truth:
+```bash
+python3 simulation_analysis/overlay_ground_truth.py [run_ids]
+# Generates overlay plots in simulation_analysis/plots/
+```
+
+Outputs:
+- Speed distributions (histogram + cumulative)
+- Metrics comparison (6 key metrics side-by-side)
+- Ground truth (blue dashed) vs simulation (orange)
+
+### Stage 6: Analyze & Interpret Results
+
+Review comparison data to identify which parameter(s) most improve:
 1. **Path Efficiency** (primary target)
 2. **Collision Rate** (secondary target)
 3. **Speed realism** (tertiary target)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Script to run a recording test with proper service calls.
+Automatically updates the metrics.yaml result_file for each run.
 """
 
 import rclpy
@@ -11,6 +12,32 @@ from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion
 from std_msgs.msg import Header
 import time
 import sys
+import os
+import subprocess
+
+def update_metrics_config(run_id):
+    """Update metrics.yaml to save results in the correct run directory"""
+    # Update the installed config (what ROS actually uses)
+    config_file = os.path.expanduser('~/sfm_ws_fresh/install/hunav_evaluator/share/hunav_evaluator/config/metrics.yaml')
+    result_dir = os.path.expanduser(f'~/sfm_ws_fresh/results/run_{run_id}')
+    
+    # Ensure the run directory exists
+    os.makedirs(result_dir, exist_ok=True)
+    
+    # Update only the result_file line (preserve formatting/comments)
+    with open(config_file, 'r') as f:
+        lines = f.readlines()
+    
+    # Find and replace the result_file line
+    for i, line in enumerate(lines):
+        if 'result_file:' in line:
+            lines[i] = f"    result_file: '{result_dir}/metrics'\n"
+            break
+    
+    with open(config_file, 'w') as f:
+        f.writelines(lines)
+    
+    print(f"Updated installed metrics.yaml: result_file = {result_dir}/metrics")
 
 class RecordingTest(Node):
     def __init__(self):
@@ -84,13 +111,26 @@ class RecordingTest(Node):
             return False
 
 def main():
+    # Get run_id from command line argument (default to 1)
+    run_id = 1
+    if len(sys.argv) > 1:
+        try:
+            run_id = int(sys.argv[1])
+        except ValueError:
+            print(f'Error: run_id must be an integer, got "{sys.argv[1]}"')
+            sys.exit(1)
+    
+    # Update the metrics config before starting ROS
+    print(f'Setting up run {run_id}...')
+    update_metrics_config(run_id)
+    
     rclpy.init()
     
     node = RecordingTest()
     
     try:
         # Start recording
-        if not node.start_recording(run_id=1, experiment_tag='baseline_oat'):
+        if not node.start_recording(run_id=run_id, experiment_tag='baseline_oat'):
             sys.exit(1)
         
         # Record for 120 seconds
