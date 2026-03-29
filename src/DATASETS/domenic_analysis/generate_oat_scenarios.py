@@ -80,12 +80,12 @@ GLOBAL_GOALS = {
 }
 
 SPAWN_REGION = {
-    'x_min': -5.0, 'x_max': 3.5,
-    'y_min': -9.0, 'y_max': 6.0,
+    'x_min': -4.5, 'x_max': 3.2,
+    'y_min': -10.6, 'y_max': 6.9,
 }
 
 MIN_SPAWN_SEPARATION = 0.6
-NUM_AGENTS = 25
+NUM_AGENTS = 12
 RADIUS = 0.4
 
 
@@ -113,7 +113,7 @@ def generate_oat_scenario(variation_name, variation_spec, num_agents=NUM_AGENTS,
     """Generate a scenario for OAT parameter variation."""
     
     if output_dir is None:
-        output_dir = Path(__file__).parent.parent.parent / 'hunav_gazebo_wrapper' / 'scenarios' / 'domenic'
+        output_dir = Path(__file__).parent.parent.parent / 'hunav_gazebo_wrapper' / 'scenarios' / 'domenic' / 'cafe'
     
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -123,7 +123,7 @@ def generate_oat_scenario(variation_name, variation_spec, num_agents=NUM_AGENTS,
     scenario = {
         'hunav_loader': {
             'ros__parameters': {
-                'yaml_base_name': f'cafe_oat_{variation_name}',
+                'yaml_base_name': 'agents_cafe',
                 'simulator': 'Gazebo Classic',
                 'map': 'cafe',
                 'publish_people': True,

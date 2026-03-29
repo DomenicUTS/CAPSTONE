@@ -8,12 +8,12 @@ from launch import LaunchDescription
 from launch.actions import (SetEnvironmentVariable,
                             DeclareLaunchArgument, ExecuteProcess, Shutdown,
                             RegisterEventHandler, TimerAction, LogInfo)
-from launch.conditions import UnlessCondition
+from launch.conditions import UnlessCondition, IfCondition
 from launch.substitutions import (PathJoinSubstitution,
                             LaunchConfiguration, PythonExpression, EnvironmentVariable)
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from launch.event_handlers import OnProcessStart
+from launch.event_handlers import OnProcessStart, OnProcessExit
 
 
 def generate_launch_description():
@@ -152,7 +152,7 @@ def generate_launch_description():
     }
 
     gzserver_launch = ExecuteProcess(
-        cmd=use_nvidia_gpu + ['gzserver ', ' --pause ', PathJoinSubstitution([
+        cmd=use_nvidia_gpu + ['gzserver ', PathJoinSubstitution([
             FindPackageShare('hunav_gazebo_wrapper'),
             'worlds',
             'generatedWorld.world'
@@ -167,7 +167,8 @@ def generate_launch_description():
         cmd=use_nvidia_gpu + ['gzclient', ' --verbose'],
         output='screen',
         shell=True,
-        on_exit=Shutdown()
+        on_exit=Shutdown(),
+        condition=IfCondition(LaunchConfiguration('gui'))
     )
 
     gz_launch_event = RegisterEventHandler(
@@ -232,6 +233,10 @@ def generate_launch_description():
         'verbose', default_value='true',
         description='Set "true" to increase messages written to terminal.'
     )
+    declare_gui = DeclareLaunchArgument(
+        'gui', default_value='true',
+        description='Set "true" to enable Gazebo GUI, "false" for headless mode (better performance)'
+    )
 
     ld = LaunchDescription()
 
@@ -253,6 +258,7 @@ def generate_launch_description():
     ld.add_action(declare_navigation)
     ld.add_action(declare_ignore_models)
     ld.add_action(declare_arg_verbose)
+    ld.add_action(declare_gui)
 
     # Generate the world with the agents
     # launch hunav_loader and the WorldGenerator

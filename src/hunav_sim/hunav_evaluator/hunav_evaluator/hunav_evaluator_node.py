@@ -44,6 +44,11 @@ class HunavEvaluatorNode(Node):
         # base name of the result files
         self.declare_parameter("result_file", "metrics")
 
+        # Export robot metrics to CSV files (trajectory only is needed for crowd analysis)
+        self.export_robot_metrics = (
+            self.declare_parameter("export_robot_metrics", False).get_parameter_value().bool_value
+        )
+
         self.metrics_to_compute = self.get_metrics_to_compute()
 
         self.get_logger().info("Hunav evaluator:")
@@ -276,14 +281,19 @@ class HunavEvaluatorNode(Node):
             f"Metrics computed: {self.metrics_to_compute.keys()}"
         )
         
-        # Export raw trajectories in ETH/UCY format
+        # Export raw trajectories in ETH/UCY format (always done)
         self.export_raw_trajectories()
         
-        self.store_metrics(self.result_file_path)
-
-        # Now, filter according to the different behaviors
-        for i in range(1, (self.number_of_behaviors + 1)):
-            self.compute_metrics_behavior(i)
+        # Optionally export robot metrics and per-behavior analysis
+        if self.export_robot_metrics:
+            self.store_metrics(self.result_file_path)
+            # Now, filter according to the different behaviors
+            for i in range(1, (self.number_of_behaviors + 1)):
+                self.compute_metrics_behavior(i)
+        else:
+            self.get_logger().info(
+                "Robot metrics export disabled. Only pedestrian trajectories saved (true_pos_.csv)."
+            )
 
     def get_metrics_to_compute(self) -> dict:
         """Get the metrics to compute based on parameters.
@@ -388,8 +398,8 @@ class HunavEvaluatorNode(Node):
                 # Use agent.id as pedestrian ID
                 ped_ids_list.append(agent.id)
                 frames_list.append(frame_counter)
-                x_positions.append(agent.pose.position.x)
-                y_positions.append(agent.pose.position.y)
+                x_positions.append(agent.position.position.x)
+                y_positions.append(agent.position.position.y)
             frame_counter += 1
         
         # Write in ETH/UCY format (4 rows: frame indices, ped IDs, x coords, y coords)
