@@ -1,6 +1,6 @@
 hunav_loader:
   ros__parameters:
-    yaml_base_name: cafe_oat_goal_low
+    yaml_base_name: agents_cafe
     simulator: Gazebo Classic
     map: cafe
     publish_people: true
