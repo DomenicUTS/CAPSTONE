@@ -1,0 +1,114 @@
+================================================================================
+CENTRAL TUNNEL TESTING PARAMETERS
+================================================================================
+Environment: central_tunnel.world (38.5m × 17.5m corridor)
+Agents: 40 (20 westbound, 20 eastbound)
+Groups: 5 dyads + 3 triads + 21 individuals
+Configuration Mode: 1 (BEH_CONF_CUSTOM) — YAML values used exactly
+Generator Script: generate_central_tunnel_yamls.py (seed=42)
+Launch File: central_tunnel_no_robot.launch.py
+
+================================================================================
+TEST PLAN: 19 RUNS TOTAL
+================================================================================
+
+BASELINE (3 runs) — ct_baseline.yaml
+  Run 1: ros2 launch hunav_gazebo_wrapper central_tunnel_no_robot.launch.py
+  Run 2: (repeat)
+  Run 3: (repeat)
+  Purpose: Establish variance bounds. All parameters at default values.
+
+PHASE 1 — SOCIAL FORCE (4 runs)
+  Low  (×0.55): ct_phase1_social_low.yaml
+    ros2 launch hunav_gazebo_wrapper central_tunnel_no_robot.launch.py configuration_file:=domenic/central_tunnel/ct_phase1_social_low.yaml
+  Low  (repeat)
+  High (×1.70): ct_phase1_social_high.yaml
+    ros2 launch hunav_gazebo_wrapper central_tunnel_no_robot.launch.py configuration_file:=domenic/central_tunnel/ct_phase1_social_high.yaml
+  High (repeat)
+  Effect: social_force_factor scaled. Expect higher SF → wider avoidance, fewer collisions.
+
+PHASE 2 — GOAL FORCE (4 runs)
+  Low  (×0.60): ct_phase2_goal_low.yaml
+    ros2 launch hunav_gazebo_wrapper central_tunnel_no_robot.launch.py configuration_file:=domenic/central_tunnel/ct_phase2_goal_low.yaml
+  Low  (repeat)
+  High (×1.60): ct_phase2_goal_high.yaml
+    ros2 launch hunav_gazebo_wrapper central_tunnel_no_robot.launch.py configuration_file:=domenic/central_tunnel/ct_phase2_goal_high.yaml
+  High (repeat)
+  Effect: goal_force_factor scaled. Expect higher GF → more direct paths, fewer detours.
+
+PHASE 3 — SPEED (4 runs)
+  Low  (×0.75): ct_phase3_speed_low.yaml
+    ros2 launch hunav_gazebo_wrapper central_tunnel_no_robot.launch.py configuration_file:=domenic/central_tunnel/ct_phase3_speed_low.yaml
+  Low  (repeat)
+  High (×1.25): ct_phase3_speed_high.yaml
+    ros2 launch hunav_gazebo_wrapper central_tunnel_no_robot.launch.py configuration_file:=domenic/central_tunnel/ct_phase3_speed_high.yaml
+  High (repeat)
+  Effect: max_vel scaled. Expect higher speed → more collisions (emergent gridlock).
+
+PHASE 4 — OBSTACLE FORCE (4 runs)
+  Low  (×0.50): ct_phase4_obstacle_low.yaml
+    ros2 launch hunav_gazebo_wrapper central_tunnel_no_robot.launch.py configuration_file:=domenic/central_tunnel/ct_phase4_obstacle_low.yaml
+  Low  (repeat)
+  High (×2.00): ct_phase4_obstacle_high.yaml
+    ros2 launch hunav_gazebo_wrapper central_tunnel_no_robot.launch.py configuration_file:=domenic/central_tunnel/ct_phase4_obstacle_high.yaml
+  High (repeat)
+  Effect: obstacle_force_factor scaled. Expect higher OF → agents avoid walls more, stay center.
+
+================================================================================
+BASELINE PARAMETER VALUES (per-agent, seed=42)
+================================================================================
+Social Force Factor:  mean=11.58  range=[7.06, 15.72]  clamp=[5.0, 20.0]
+Goal Force Factor:    mean=3.42   range=[2.51, 4.19]   clamp=[2.0, 5.0]
+Obstacle Force Factor:mean=16.91  range=[11.10, 24.64]  clamp=[2.0, 50.0]
+Max Velocity:         mean=1.28   range=[1.04, 1.52]   clamp=[0.0, 1.8]
+
+================================================================================
+RECORDING PROCEDURE
+================================================================================
+1. Source workspace:
+   source install/setup.bash
+
+2. Launch simulation (example baseline):
+   ros2 launch hunav_gazebo_wrapper central_tunnel_no_robot.launch.py
+
+3. Launch with specific config:
+   ros2 launch hunav_gazebo_wrapper central_tunnel_no_robot.launch.py \
+     configuration_file:=domenic/central_tunnel/ct_phase1_social_low.yaml
+
+4. Record bag (in separate terminal):
+   ros2 bag record -a -o results/central_tunnel/ct_baseline_run1
+
+5. Wait for simulation to complete (agents traverse tunnel ~30m)
+
+6. Run evaluation:
+   ros2 launch hunav_evaluator hunav_evaluator_launch.py
+
+7. Compare with ground truth:
+   python3 src/DATASETS/scripts/ground_truth_analysis.py \
+     --bag results/central_tunnel/ct_baseline_run1 \
+     --ground-truth src/DATASETS/eth/univ/
+
+================================================================================
+EXPECTED METRICS TO COMPARE
+================================================================================
+- Mean walking speed (ETH univ: ~1.3 m/s)
+- Speed standard deviation
+- Collision rate (per agent per second)
+- Near-miss rate (threshold: 0.4m, 0.6m, 0.8m)
+- Path efficiency (displacement / arc length)
+- Inter-agent distance distribution
+- Group cohesion (for dyads/triads)
+- Heading jerk (smoothness of trajectories)
+
+================================================================================
+KEY DIFFERENCES FROM CAFÉ TESTING
+================================================================================
+1. Configuration Mode: 1 (CUSTOM) instead of 2 (RANDOM_NORMAL)
+   → Force factors are NOT overwritten with random values
+   → All OAT phases now produce deterministic parameter changes
+2. Agent Count: 40 instead of 12
+3. Flow Pattern: Bidirectional corridor instead of random crossing
+4. Group Walking: 5 dyads + 3 triads (café had none)
+5. Goal Distance: ~30m traversal (café had short distances)
+6. Obstacle Phase: Added Phase 4 (café only had 3 phases)
+7. No Robot: dummy_robot with ignore_models
