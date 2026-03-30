@@ -93,7 +93,8 @@ install(DIRECTORY behavior_trees/
 # Install environment-specific BT files flat (C++ looks in behavior_trees/ directly)
 file(GLOB CAFE_BT_FILES "behavior_trees/cafe/*.xml")
 file(GLOB CT_BT_FILES "behavior_trees/central_tunnel/*.xml")
-install(FILES ${CAFE_BT_FILES} ${CT_BT_FILES}
+file(GLOB DELTA_BT_FILES "behavior_trees/delta/*.xml")
+install(FILES ${CAFE_BT_FILES} ${CT_BT_FILES} ${DELTA_BT_FILES}
    DESTINATION share/${PROJECT_NAME}/behavior_trees
 )
 

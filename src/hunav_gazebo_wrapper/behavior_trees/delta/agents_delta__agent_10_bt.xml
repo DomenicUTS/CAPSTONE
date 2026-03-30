@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root main_tree_to_execute="DefaultTree" BTCPP_format="4">
+  <TreeNodesModel>
+    <Condition ID="IsGoalReached">
+      <input_port name="agent_id" type="int">10</input_port>
+    </Condition>
+    <Action ID="UpdateGoal">
+      <input_port name="agent_id" type="int">10</input_port>
+    </Action>
+    <Action ID="RegularNav">
+      <input_port name="agent_id" type="int">10</input_port>
+      <input_port name="time_step" type="double" default="0.1"/>
+    </Action>
+    <Action ID="SetGoal">
+      <input_port name="agent_id" type="int">10</input_port>
+      <input_port name="goal_id" type="int"/>
+    </Action>
+    <Action ID="SetGroupWalk">
+      <input_port name="main_agent_id" type="int">10</input_port>
+      <input_port name="time_step" type="double"/>
+      <input_port name="non_main_agent_ids" type="std::string"/>
+      <input_port name="duration" type="double" default="0.0"/>
+    </Action>
+  </TreeNodesModel>
+
+<include path="BTRegularNav.xml" />
+
+<BehaviorTree ID="DefaultTree">
+  <Fallback name="MainFallback">
+    <Sequence name="SetGoals">
+        <RunOnce>
+          <SetGoal agent_id="{id}" goal_id="10"/>
+        </RunOnce>
+        <Inverter>
+          <RunOnce>
+            <SetGoal agent_id="{id}" goal_id="15"/>
+          </RunOnce>
+        </Inverter>
+    </Sequence>
+    <SetGroupWalk main_agent_id="{id}" time_step="{dt}" 
+                  non_main_agent_ids="11,12" duration="0.0"/>
+  </Fallback>
+</BehaviorTree>
+
+</root>
