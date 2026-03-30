@@ -5,7 +5,7 @@ Environment: central_tunnel.world (38.5m × 17.5m corridor)
 Agents: 40 (20 westbound, 20 eastbound)
 Groups: 5 dyads + 3 triads + 21 individuals
 Configuration Mode: 1 (BEH_CONF_CUSTOM) — YAML values used exactly
-Generator Script: generate_central_tunnel_yamls.py (seed=42)
+Generator Script: src/hunav_gazebo_wrapper/scenarios/domenic/generate_central_tunnel_yamls.py (seed=42)
 Launch File: central_tunnel_no_robot.launch.py
 
 ================================================================================
@@ -76,7 +76,7 @@ RECORDING PROCEDURE
      configuration_file:=domenic/central_tunnel/ct_phase1_social_low.yaml
 
 4. Record bag (in separate terminal):
-   ros2 bag record -a -o results/central_tunnel/ct_baseline_run1
+   ros2 bag record -a -o sim_results/central_tunnel/ct_baseline_run1
 
 5. Wait for simulation to complete (agents traverse tunnel ~30m)
 
@@ -84,9 +84,8 @@ RECORDING PROCEDURE
    ros2 launch hunav_evaluator hunav_evaluator_launch.py
 
 7. Compare with ground truth:
-   python3 src/DATASETS/scripts/ground_truth_analysis.py \
-     --bag results/central_tunnel/ct_baseline_run1 \
-     --ground-truth src/DATASETS/eth/univ/
+   python3 src/analysis/ground_truth_analysis.py \
+     --custom-dataset run_1 sim_results/central_tunnel/central_tunnel_baseline/run_1/true_pos_.csv
 
 ================================================================================
 EXPECTED METRICS TO COMPARE

@@ -66,7 +66,7 @@ ensuring all YAML values are used exactly as specified.
 ## How Parameters Are Defined and Altered
 
 ### Baseline Parameters (Central Tunnel)
-Generated programmatically with `generate_central_tunnel_yamls.py`:
+Generated programmatically with `src/hunav_gazebo_wrapper/scenarios/domenic/generate_central_tunnel_yamls.py`:
 - `social_force_factor`: mean 11.6, range [7.1, 15.7] (within [5.0, 20.0] clamp)
 - `goal_force_factor`: mean 3.4, range [2.5, 4.2] (within [2.0, 5.0] clamp)
 - `obstacle_force_factor`: mean 16.9, range [11.1, 24.6] (within [2.0, 50.0] clamp)

@@ -86,6 +86,15 @@ install(DIRECTORY scenarios/
 
 install(DIRECTORY behavior_trees/
    DESTINATION share/${PROJECT_NAME}/behavior_trees
+   PATTERN "*.xml"
+   REGEX "cafe/|central_tunnel/" EXCLUDE
+)
+
+# Install environment-specific BT files flat (C++ looks in behavior_trees/ directly)
+file(GLOB CAFE_BT_FILES "behavior_trees/cafe/*.xml")
+file(GLOB CT_BT_FILES "behavior_trees/central_tunnel/*.xml")
+install(FILES ${CAFE_BT_FILES} ${CT_BT_FILES}
+   DESTINATION share/${PROJECT_NAME}/behavior_trees
 )
 
 install(DIRECTORY media/models

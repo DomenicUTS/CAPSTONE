@@ -16,12 +16,12 @@ import os
 import subprocess
 
 def update_metrics_config(run_id):
-    """Update metrics.yaml to save results in the results/ base directory"""
+    """Update metrics.yaml to save results in the sim_results/ base directory"""
     # Update the installed config (what ROS actually uses)
     config_file = os.path.expanduser('~/sfm_ws_fresh/install/hunav_evaluator/share/hunav_evaluator/config/metrics.yaml')
     
-    # Set result_file to just results/metrics (evaluator will add run_N/)
-    result_path = '/home/domenic/sfm_ws_fresh/results/metrics'
+    # Set result_file to just sim_results/metrics (evaluator will add run_N/)
+    result_path = '/home/domenic/sfm_ws_fresh/sim_results/metrics'
     
     # Update only the result_file line (preserve formatting/comments)
     with open(config_file, 'r') as f:

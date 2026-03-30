@@ -58,8 +58,8 @@ Constants: `src/hunav_sim/hunav_msgs/msg/AgentBehavior.msg`
 
 ## Scaling Implementation
 
-Both `generate_pure_yamls.py` (café) and `generate_central_tunnel_yamls.py` follow
-the same proportional scaling approach:
+Both `generate_pure_yamls.py` and `generate_central_tunnel_yamls.py` (located in
+`src/hunav_gazebo_wrapper/scenarios/domenic/`) follow the same proportional scaling approach:
 
 1. Load baseline YAML with all agents
 2. For each agent, read baseline value: `P_baseline[i]`
@@ -102,7 +102,7 @@ Both launch files follow the same pattern:
 ### Step 2: Record data (120 seconds)
 
 ```bash
-python3 run_recording.py <run_id>
+python3 src/analysis/run_recording.py <run_id>
 ```
 
 This script:
@@ -110,14 +110,14 @@ This script:
 2. Calls `/hunav_start_recording` ROS2 service
 3. Waits 120 seconds
 4. Calls `/hunav_stop_recording` service
-5. Metrics and trajectories saved to `results/`
+5. Metrics and trajectories saved to `sim_results/`
 
 ### Step 3: Analyze against ground truth
 
 ```bash
-python3 src/DATASETS/ground_truth_analysis.py \
-  --custom-dataset run_1 results/central_tunnel/ct_baseline/run_1/true_pos_.csv \
-  --custom-dataset run_2 results/central_tunnel/ct_baseline/run_2/true_pos_.csv \
+python3 src/analysis/ground_truth_analysis.py \
+  --custom-dataset run_1 sim_results/central_tunnel/central_tunnel_baseline/run_1/true_pos_.csv \
+  --custom-dataset run_2 sim_results/central_tunnel/central_tunnel_baseline/run_2/true_pos_.csv \
   --dt 0.1 --output-dir sim_analysis_ct_baseline
 ```
 
@@ -166,4 +166,3 @@ The BT system looks for: `<installed>/behavior_trees/{yaml_base_name}__agent_{id
 ### Path efficiency near zero
 - Agents oscillating between social force and goal force
 - Try increasing goal_force_factor or reducing social_force_factor
-- See INVESTIGATION_FINDINGS.md for root cause analysis

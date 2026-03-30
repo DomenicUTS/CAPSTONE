@@ -35,11 +35,15 @@ import random
 # ──────────────────────────────────────────────────────────────────────
 # PATHS
 # ──────────────────────────────────────────────────────────────────────
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-SCENARIO_DIR = os.path.join(BASE_DIR, 'src', 'hunav_gazebo_wrapper', 'scenarios', 'domenic', 'central_tunnel')
-BT_SRC_DIR = os.path.join(BASE_DIR, 'src', 'hunav_gazebo_wrapper', 'behavior_trees', 'central_tunnel')
-BT_FLAT_DIR = os.path.join(BASE_DIR, 'src', 'hunav_gazebo_wrapper', 'behavior_trees')
-BT_INSTALL_DIR = os.path.join(BASE_DIR, 'install', 'hunav_gazebo_wrapper', 'share',
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+# Navigate from scenarios/domenic/ up to hunav_gazebo_wrapper/
+WRAPPER_DIR = os.path.dirname(os.path.dirname(SCRIPT_DIR))
+# Workspace root (up from src/hunav_gazebo_wrapper/)
+WS_ROOT = os.path.dirname(os.path.dirname(WRAPPER_DIR))
+
+SCENARIO_DIR = os.path.join(SCRIPT_DIR, 'central_tunnel')
+BT_SRC_DIR = os.path.join(WRAPPER_DIR, 'behavior_trees', 'central_tunnel')
+BT_INSTALL_DIR = os.path.join(WS_ROOT, 'install', 'hunav_gazebo_wrapper', 'share',
                                'hunav_gazebo_wrapper', 'behavior_trees')
 
 YAML_BASE_NAME = 'agents_central_tunnel'
@@ -683,15 +687,10 @@ def main():
     print("\n[3/3] Generating Behavior Tree XML files...")
     bt_files = generate_bt_files(baseline)
     
-    # Save to source subdirectory
+    # Save to source subdirectory (CMakeLists installs these flat)
     os.makedirs(BT_SRC_DIR, exist_ok=True)
     for fname, content in bt_files.items():
         with open(os.path.join(BT_SRC_DIR, fname), 'w') as f:
-            f.write(content)
-    
-    # Also save to flat source directory (for install)
-    for fname, content in bt_files.items():
-        with open(os.path.join(BT_FLAT_DIR, fname), 'w') as f:
             f.write(content)
     
     # Also save to installed directory (for immediate use before rebuild)
@@ -716,7 +715,6 @@ def main():
     
     print(f"\nBehavior Trees ({len(bt_files)} files):")
     print(f"  {BT_SRC_DIR}/")
-    print(f"  {BT_FLAT_DIR}/ (flat, for install)")
     
     print("\n" + "=" * 70)
     print("OAT TEST PLAN")

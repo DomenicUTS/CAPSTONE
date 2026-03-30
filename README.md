@@ -85,12 +85,12 @@ ros2 launch hunav_gazebo_wrapper central_tunnel_no_robot.launch.py \
   configuration_file:=domenic/central_tunnel/ct_baseline.yaml
 
 # Terminal 2: Record 120 seconds of data
-python3 run_recording.py <run_id>
+python3 src/analysis/run_recording.py <run_id>
 
 # After all runs: Compare against ground truth
-python3 src/DATASETS/ground_truth_analysis.py \
-  --custom-dataset run_1 results/central_tunnel/ct_baseline/run_1/true_pos_.csv \
-  --dt 0.1 --output-dir sim_analysis_ct_baseline
+python3 src/analysis/ground_truth_analysis.py \
+  --custom-dataset run_1 sim_results/central_tunnel/central_tunnel_baseline/run_1/true_pos_.csv \
+  --dt 0.1 --output-dir sim_results/central_tunnel/analysis
 ```
 
 ### 5. Evaluation Metrics
@@ -121,10 +121,16 @@ python3 src/DATASETS/ground_truth_analysis.py \
 ## Directory Structure
 
 ```
-├── generate_pure_yamls.py                       # Café phase YAML generator
-├── generate_central_tunnel_yamls.py             # Central tunnel YAML + BT generator
-├── run_recording.py                             # 120s recording script
 ├── CAFE_TESTING_PARAMETERS.txt                  # Café 15-run test plan
+├── CENTRAL_TUNNEL_TESTING_PARAMETERS.txt        # Central tunnel 19-run test plan
+├── CAPSTONE_GUIDE.md                            # Paper-writing guide
+├── METHODOLOGY.md                               # OAT methodology details
+│
+├── src/analysis/                                # Analysis & recording scripts
+│   ├── ground_truth_analysis.py                 # ETH/UCY comparison
+│   ├── plot_parameter_variation.py              # Per-agent parameter plots
+│   ├── run_recording.py                         # 120s recording script
+│   └── verify_metrics.py                        # Metric verification
 │
 ├── src/hunav_gazebo_wrapper/
 │   ├── launch/
@@ -134,6 +140,8 @@ python3 src/DATASETS/ground_truth_analysis.py \
 │   │   ├── cafe.world
 │   │   └── central_tunnel.world
 │   ├── scenarios/domenic/
+│   │   ├── generate_pure_yamls.py               # Café YAML generator
+│   │   ├── generate_central_tunnel_yamls.py     # Central tunnel YAML + BT generator
 │   │   ├── cafe/         (7 YAMLs: baseline + 3 phases × low/high)
 │   │   └── central_tunnel/ (9 YAMLs: baseline + 4 phases × low/high)
 │   └── behavior_trees/   (BT XMLs per agent, flat directory)
@@ -144,13 +152,12 @@ python3 src/DATASETS/ground_truth_analysis.py \
 │   └── hunav_msgs/            # Message definitions (AgentBehavior.msg etc.)
 │
 ├── src/DATASETS/
-│   ├── ground_truth_analysis.py  # ETH/UCY comparison
 │   ├── eth/                      # ETH datasets (hotel, univ)
 │   └── ucy/                      # UCY datasets (zara, students)
 │
-└── results/
+└── sim_results/
     ├── cafe/              # 15 runs of café data
-    └── central_tunnel/    # central tunnel outputs (planned)
+    └── central_tunnel/    # Central tunnel outputs
 ```
 
 ## Café Results Summary
