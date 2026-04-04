@@ -377,6 +377,29 @@ class CrowdMetrics:
     group_cohesion_std: float = 0.0
     group_speed_std_mean: float = 0.0    # m/s — speed variance within groups
 
+    # ── V2 Metrics (methodology success criteria) ──
+    # Time-to-Collision (TTC) — linear extrapolation of current velocities
+    ttc_mean: float = 0.0               # seconds — mean TTC across all agent-pair-frame events
+    ttc_median: float = 0.0             # seconds — median TTC
+    ttc_p10: float = 0.0               # seconds — 10th percentile (most dangerous encounters)
+
+    # Stuck rate — fraction of agent-frames where agent is effectively stationary
+    stuck_rate: float = 0.0             # dimensionless ∈ [0,1] — agent-frames with speed < 0.05 m/s
+
+    # Oscillation index — heading reversals per meter of path traveled
+    oscillation_index_mean: float = 0.0  # reversals/m — mean across agents
+    oscillation_index_std: float = 0.0   # reversals/m — std across agents
+
+    # Translational jerk — third derivative of position magnitude
+    translational_jerk_mean: float = 0.0  # m/s³ — smoothness of speed changes
+    translational_jerk_std: float = 0.0   # m/s³
+
+    # Proxemic zone distribution — fraction of agent-frames in each Hall (1966) zone
+    proxemic_intimate_fraction: float = 0.0   # min_dist < 0.45 m
+    proxemic_personal_fraction: float = 0.0   # 0.45 ≤ min_dist < 1.2 m
+    proxemic_social_fraction: float = 0.0     # 1.2 ≤ min_dist < 3.6 m
+    proxemic_public_fraction: float = 0.0     # min_dist ≥ 3.6 m
+
     # ── Distributions (stored for plotting, not in JSON summary) ──
     speed_distribution: list = field(default_factory=list)
     min_distance_distribution: list = field(default_factory=list)
@@ -414,11 +437,19 @@ def compute_metrics(td: TrajectoryData, dataset_name: str) -> CrowdMetrics:
     heading_jerks = []
     speed_cvs = []
     accels_all = []
+    oscillation_indices = []      # V2: heading reversals per meter
+    translational_jerks = []      # V2: m/s³ per agent
+    total_obs = 0                 # V2: total observations for stuck rate
+    stuck_obs = 0                 # V2: observations with speed < 0.05 m/s
 
     for pid in unique_peds:
         mask = td.ped_ids == pid
         idx = np.where(mask)[0]
         if len(idx) < 3:
+            # Still count for stuck rate even with few observations
+            total_obs += len(idx)
+            pid_spd = np.linalg.norm(td.velocities[idx], axis=1)
+            stuck_obs += int(np.sum(pid_spd < 0.05))
             continue
 
         order = np.argsort(td.frames[idx])
@@ -427,6 +458,10 @@ def compute_metrics(td: TrajectoryData, dataset_name: str) -> CrowdMetrics:
         vel = td.velocities[sorted_idx]
         spd = np.linalg.norm(vel, axis=1)
         frm = td.frames[sorted_idx]
+
+        # V2: Stuck rate accumulation
+        total_obs += len(sorted_idx)
+        stuck_obs += int(np.sum(spd < 0.05))
 
         # Path efficiency
         straight_line = np.linalg.norm(pos[-1] - pos[0])
@@ -441,6 +476,7 @@ def compute_metrics(td: TrajectoryData, dataset_name: str) -> CrowdMetrics:
             speed_cvs.append(float(np.std(valid_spd) / np.mean(valid_spd)))
 
         # Acceleration
+        agent_accels = []
         for k in range(1, len(sorted_idx)):
             df = frm[k] - frm[k - 1]
             if df <= 0:
@@ -451,6 +487,17 @@ def compute_metrics(td: TrajectoryData, dataset_name: str) -> CrowdMetrics:
             acc = np.linalg.norm(vel[k] - vel[k - 1]) / local_dt
             if acc < 20:  # filter noise
                 accels_all.append(acc)
+                agent_accels.append(acc)
+
+        # V2: Translational jerk (d(acceleration)/dt)
+        if len(agent_accels) >= 2:
+            agent_accels_arr = np.array(agent_accels)
+            # Jerk = change in acceleration magnitude / dt
+            frame_dt = td.dt  # approximate uniform dt
+            d_acc = np.abs(np.diff(agent_accels_arr)) / frame_dt
+            d_acc = d_acc[d_acc < 100]  # filter extreme outliers
+            if len(d_acc) > 0:
+                translational_jerks.append(float(np.mean(d_acc)))
 
         # Heading jerk (smoothness of direction changes)
         headings = np.arctan2(vel[:, 1], vel[:, 0])
@@ -470,6 +517,14 @@ def compute_metrics(td: TrajectoryData, dataset_name: str) -> CrowdMetrics:
             if len(valid_jerk) > 0:
                 heading_jerks.append(float(np.mean(valid_jerk)))
 
+        # V2: Oscillation index (heading reversals per meter)
+        if len(headings) >= 3 and actual_path > 0.1:
+            dh = np.diff(headings)
+            dh = (dh + np.pi) % (2 * np.pi) - np.pi
+            # A reversal occurs when the sign of angular velocity changes
+            sign_changes = np.sum(np.abs(np.diff(np.sign(dh))) > 0)
+            oscillation_indices.append(float(sign_changes / actual_path))
+
     if path_efficiencies:
         m.path_efficiency_mean = float(np.mean(path_efficiencies))
         m.path_efficiency_std = float(np.std(path_efficiencies))
@@ -484,15 +539,35 @@ def compute_metrics(td: TrajectoryData, dataset_name: str) -> CrowdMetrics:
         m.acceleration_std = float(np.std(accels_all))
         m.acceleration_distribution = accels_all
 
-    # --- Pairwise: minimum inter-agent distances ---
+    # V2: Stuck rate
+    if total_obs > 0:
+        m.stuck_rate = float(stuck_obs / total_obs)
+
+    # V2: Oscillation index
+    if oscillation_indices:
+        m.oscillation_index_mean = float(np.mean(oscillation_indices))
+        m.oscillation_index_std = float(np.std(oscillation_indices))
+
+    # V2: Translational jerk
+    if translational_jerks:
+        m.translational_jerk_mean = float(np.mean(translational_jerks))
+        m.translational_jerk_std = float(np.std(translational_jerks))
+
+    # --- Pairwise: minimum inter-agent distances, TTC, proxemic zones ---
     min_dists_all = []
     collisions = 0
     near_misses = 0
     total_pair_checks = 0
+    ttc_values = []             # V2: all valid TTC values
+    prox_intimate = 0           # V2: proxemic zone counters
+    prox_personal = 0
+    prox_social = 0
+    prox_public = 0
 
     for frame in unique_frames:
         mask = td.frames == frame
         pos_f = td.positions[mask]
+        vel_f = td.velocities[mask]
         n = len(pos_f)
         if n < 2:
             continue
@@ -500,12 +575,43 @@ def compute_metrics(td: TrajectoryData, dataset_name: str) -> CrowdMetrics:
             dists = np.linalg.norm(pos_f[i] - pos_f, axis=1)
             dists[i] = np.inf  # exclude self
             min_d = np.min(dists)
+            nearest_j = np.argmin(dists)
             min_dists_all.append(min_d)
             total_pair_checks += 1
             if min_d < COLLISION_RADIUS:
                 collisions += 1
             if min_d < NEAR_MISS_RADIUS:
                 near_misses += 1
+
+            # V2: Proxemic zone classification (Hall, 1966)
+            if min_d < 0.45:
+                prox_intimate += 1
+            elif min_d < 1.2:
+                prox_personal += 1
+            elif min_d < 3.6:
+                prox_social += 1
+            else:
+                prox_public += 1
+
+            # V2: Time-to-Collision (linear extrapolation)
+            # TTC = time until ||p_i + v_i*t - (p_j + v_j*t)|| = COLLISION_RADIUS
+            # Solved as quadratic in t: a*t² + b*t + c = 0
+            # where dp = p_i - p_j, dv = v_i - v_j
+            dp = pos_f[i] - pos_f[nearest_j]
+            dv = vel_f[i] - vel_f[nearest_j]
+            a = np.dot(dv, dv)
+            b = 2.0 * np.dot(dp, dv)
+            c = np.dot(dp, dp) - COLLISION_RADIUS ** 2
+            if a > 1e-12:  # agents have relative motion
+                discriminant = b * b - 4.0 * a * c
+                if discriminant >= 0:
+                    sqrt_disc = np.sqrt(discriminant)
+                    t1 = (-b - sqrt_disc) / (2.0 * a)
+                    t2 = (-b + sqrt_disc) / (2.0 * a)
+                    # We want the smallest positive t (time until collision)
+                    candidates = [t for t in [t1, t2] if 0 < t < 30.0]
+                    if candidates:
+                        ttc_values.append(min(candidates))
 
     if min_dists_all:
         min_dists_arr = np.array(min_dists_all)
@@ -520,6 +626,20 @@ def compute_metrics(td: TrajectoryData, dataset_name: str) -> CrowdMetrics:
     if m.num_pedestrians > 0 and m.duration_seconds > 0:
         m.collision_rate = collisions / m.num_pedestrians / m.duration_seconds
         m.near_miss_rate = near_misses / m.num_pedestrians / m.duration_seconds
+
+    # V2: TTC aggregation
+    if ttc_values:
+        ttc_arr = np.array(ttc_values)
+        m.ttc_mean = float(np.mean(ttc_arr))
+        m.ttc_median = float(np.median(ttc_arr))
+        m.ttc_p10 = float(np.percentile(ttc_arr, 10))
+
+    # V2: Proxemic zone fractions
+    if total_pair_checks > 0:
+        m.proxemic_intimate_fraction = float(prox_intimate / total_pair_checks)
+        m.proxemic_personal_fraction = float(prox_personal / total_pair_checks)
+        m.proxemic_social_fraction = float(prox_social / total_pair_checks)
+        m.proxemic_public_fraction = float(prox_public / total_pair_checks)
 
     # --- Density-Flow fundamental diagram ---
     # Measure in a circle around the scene center
@@ -626,6 +746,13 @@ def compare_metrics(gt: Dict[str, CrowdMetrics], sim: Dict[str, CrowdMetrics]) -
         "min_inter_agent_dist_mean", "min_inter_agent_dist_p5",
         "mean_density", "mean_flow",
         "group_cohesion_mean",
+        # V2 metrics
+        "ttc_mean", "ttc_median", "ttc_p10",
+        "stuck_rate",
+        "oscillation_index_mean",
+        "translational_jerk_mean",
+        "proxemic_intimate_fraction", "proxemic_personal_fraction",
+        "proxemic_social_fraction", "proxemic_public_fraction",
     ]
 
     for ds_name in sim:
@@ -661,126 +788,446 @@ def compare_metrics(gt: Dict[str, CrowdMetrics], sim: Dict[str, CrowdMetrics]) -
 # Plotting
 # ---------------------------------------------------------------------------
 
+# Consistent colour palette
+_ENV_COLORS = {"cafe": "#E07A5F", "central_tunnel": "#3D405B", "delta": "#81B29A"}
+_PHASE_COLORS = {
+    "baseline": "#4A90D9",
+    "phase1_social": "#E07A5F",
+    "phase2_goal": "#F2CC8F",
+    "phase3_speed": "#81B29A",
+    "phase4_obstacle": "#6D597A",
+}
+_GT_COLOR = "#3D405B"
+_SIM_COLOR = "#E07A5F"
+
+# Hall (1966) proxemic zone boundaries and colors
+_PROX_BOUNDS = [0, 0.45, 1.2, 3.6]
+_PROX_LABELS = ["Intimate\n(<0.45m)", "Personal\n(0.45–1.2m)", "Social\n(1.2–3.6m)", "Public\n(≥3.6m)"]
+_PROX_COLORS = ["#E07A5F", "#F2CC8F", "#81B29A", "#3D405B"]
+
+
 def plot_metrics(all_metrics: Dict[str, CrowdMetrics], output_dir: Path,
                  sim_metrics: Optional[Dict[str, CrowdMetrics]] = None):
-    """Generate comparison plots."""
+    """Generate per-phase plots: one scalar dashboard + one distribution dashboard.
+
+    Replaces the previous 4 separate plots with 2 consolidated figures that
+    cover all V1 and V2 metrics.
+    """
+    if not HAS_MPL:
+        return
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    names = list(all_metrics.keys())
+    n = len(names)
+    if n == 0:
+        return
+
+    # ── Figure 1: Complete Scalar Metrics Dashboard (6×6 = 36 panels) ────
+    metric_specs = [
+        # Row 1 — Speed
+        ("speed_mean",                 "Speed Mean (m/s)"),
+        ("speed_std",                  "Speed Std (m/s)"),
+        ("speed_median",               "Speed Median (m/s)"),
+        ("speed_p25",                  "Speed p25 (m/s)"),
+        ("speed_p75",                  "Speed p75 (m/s)"),
+        ("speed_p95",                  "Speed p95 (m/s)"),
+        # Row 2 — Safety
+        ("collision_rate",             "Collision Rate"),
+        ("near_miss_rate",             "Near-Miss Rate"),
+        ("total_collisions",           "Total Collisions"),
+        ("total_near_misses",          "Total Near-Misses"),
+        ("ttc_mean",                   "TTC Mean (s)"),
+        ("ttc_p10",                    "TTC p10 (s)"),
+        # Row 3 — Navigation
+        ("path_efficiency_mean",       "Path Efficiency μ"),
+        ("path_efficiency_std",        "Path Efficiency σ"),
+        ("speed_variability_mean",     "Speed CV μ"),
+        ("speed_variability_std",      "Speed CV σ"),
+        ("stuck_rate",                 "Stuck Rate"),
+        ("ttc_median",                 "TTC Median (s)"),
+        # Row 4 — Dynamics
+        ("acceleration_mean",          "Accel μ (m/s²)"),
+        ("acceleration_std",           "Accel σ (m/s²)"),
+        ("heading_jerk_mean",          "Heading Jerk μ"),
+        ("heading_jerk_std",           "Heading Jerk σ"),
+        ("translational_jerk_mean",    "Trans Jerk μ (m/s³)"),
+        ("translational_jerk_std",     "Trans Jerk σ (m/s³)"),
+        # Row 5 — Spacing
+        ("min_inter_agent_dist_mean",  "Min Dist μ (m)"),
+        ("min_inter_agent_dist_std",   "Min Dist σ (m)"),
+        ("min_inter_agent_dist_p5",    "Min Dist p5 (m)"),
+        ("min_inter_agent_dist_p25",   "Min Dist p25 (m)"),
+        ("oscillation_index_mean",     "Osc Index μ (rev/m)"),
+        ("oscillation_index_std",      "Osc Index σ (rev/m)"),
+        # Row 6 — Macro / Proxemic
+        ("mean_density",               "Density (ag/m²)"),
+        ("mean_flow",                  "Flow (ag/m/s)"),
+        ("proxemic_intimate_fraction", "% Intimate (<0.45m)"),
+        ("proxemic_personal_fraction", "% Personal (0.45–1.2m)"),
+        ("proxemic_social_fraction",   "% Social (1.2–3.6m)"),
+        ("proxemic_public_fraction",   "% Public (≥3.6m)"),
+    ]
+
+    # Keys that should display as percentages
+    _pct_keys = {"stuck_rate", "proxemic_intimate_fraction", "proxemic_personal_fraction",
+                 "proxemic_social_fraction", "proxemic_public_fraction"}
+
+    fig, axes = plt.subplots(6, 6, figsize=(28, 24))
+    fig.suptitle("Complete Metrics Dashboard — All Runs", fontsize=18, fontweight="bold", y=0.995)
+    axes = axes.flatten()
+    x = np.arange(n)
+
+    for idx, (key, label) in enumerate(metric_specs):
+        ax = axes[idx]
+        raw_vals = [getattr(all_metrics[nm], key, 0) for nm in names]
+        display_vals = [v * 100 if key in _pct_keys else v for v in raw_vals]
+        bars = ax.bar(x, display_vals, color=_GT_COLOR, alpha=0.85,
+                      edgecolor="white", linewidth=0.5)
+        if sim_metrics:
+            sim_raw = [getattr(sim_metrics.get(nm, CrowdMetrics()), key, 0) for nm in names]
+            sim_display = [v * 100 if key in _pct_keys else v for v in sim_raw]
+            ax.bar(x + 0.35, sim_display, width=0.35, color=_SIM_COLOR, alpha=0.85)
+        ylabel = label + " (%)" if key in _pct_keys and "%" not in label else label
+        ax.set_ylabel(ylabel, fontsize=7)
+        ax.set_xticks(x)
+        ax.set_xticklabels([nm.replace("_", "\n") for nm in names],
+                           fontsize=6, rotation=45, ha="right")
+        ax.tick_params(axis="y", labelsize=6)
+        for bar_obj, v in zip(bars, display_vals):
+            if v != 0:
+                fmt = f"{v:.1f}%" if key in _pct_keys else (
+                    f"{v:.3f}" if abs(v) < 1 else (f"{v:.1f}" if abs(v) >= 100 else f"{v:.2f}"))
+                ax.text(bar_obj.get_x() + bar_obj.get_width()/2, bar_obj.get_height(),
+                        fmt, ha="center", va="bottom", fontsize=5, color="#333")
+
+    plt.tight_layout(rect=[0, 0, 1, 0.97])
+    plt.savefig(output_dir / "metrics_dashboard.png", dpi=150, bbox_inches="tight")
+    plt.close()
+
+    # ── Figure 2: Distributions Dashboard (2×2) ──────────────────────────
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+    fig.suptitle("Distribution Analysis — All Runs", fontsize=14, fontweight="bold")
+    cmap = plt.cm.Set2
+
+    # (a) Speed distributions overlaid
+    ax = axes[0, 0]
+    for i, (nm, m) in enumerate(all_metrics.items()):
+        if m.speed_distribution:
+            ax.hist(m.speed_distribution, bins=40, density=True, alpha=0.45,
+                    color=cmap(i % 8), label=nm[:15], histtype="stepfilled")
+    ax.set_xlabel("Speed (m/s)")
+    ax.set_ylabel("Probability Density")
+    ax.set_title("Speed Distributions")
+    ax.set_xlim(0, 4)
+    ax.legend(fontsize=7, ncol=2)
+
+    # (b) Min-distance distributions with proxemic zone shading
+    ax = axes[0, 1]
+    # Draw proxemic zone backgrounds
+    ax.axvspan(0, 0.45, alpha=0.15, color=_PROX_COLORS[0], label="Intimate")
+    ax.axvspan(0.45, 1.2, alpha=0.15, color=_PROX_COLORS[1], label="Personal")
+    ax.axvspan(1.2, 3.6, alpha=0.15, color=_PROX_COLORS[2], label="Social")
+    ax.axvspan(3.6, 8.0, alpha=0.15, color=_PROX_COLORS[3], label="Public")
+    for i, (nm, m) in enumerate(all_metrics.items()):
+        if m.min_distance_distribution:
+            data = [d for d in m.min_distance_distribution if d < 8]
+            ax.hist(data, bins=60, density=True, alpha=0.4,
+                    color=cmap(i % 8), label=nm[:15], histtype="stepfilled")
+    ax.set_xlabel("Min Inter-Agent Distance (m)")
+    ax.set_ylabel("Probability Density")
+    ax.set_title("Min Distance + Proxemic Zones")
+    ax.set_xlim(0, 8)
+    ax.legend(fontsize=6, ncol=2)
+
+    # (c) Fundamental diagram
+    ax = axes[1, 0]
+    for i, (nm, m) in enumerate(all_metrics.items()):
+        if m.density_flow_points:
+            densities = [p[0] for p in m.density_flow_points]
+            flows = [p[1] for p in m.density_flow_points]
+            ax.scatter(densities, flows, alpha=0.3, s=8, color=cmap(i % 8), label=nm[:15])
+    ax.set_xlabel("Density (agents/m²)")
+    ax.set_ylabel("Flow (agents/m/s)")
+    ax.set_title("Fundamental Diagram: Density vs Flow")
+    ax.legend(fontsize=7, ncol=2)
+
+    # (d) Proxemic zone stacked bar chart per run
+    ax = axes[1, 1]
+    prox_keys = ["proxemic_intimate_fraction", "proxemic_personal_fraction",
+                 "proxemic_social_fraction", "proxemic_public_fraction"]
+    bottom = np.zeros(n)
+    for k_idx, pk in enumerate(prox_keys):
+        vals = [getattr(all_metrics[nm], pk, 0) * 100 for nm in names]
+        ax.bar(x, vals, bottom=bottom, color=_PROX_COLORS[k_idx],
+               label=_PROX_LABELS[k_idx].replace("\n", " "), edgecolor="white", linewidth=0.5)
+        bottom += np.array(vals)
+    ax.set_ylabel("% of Agent-Frame Observations")
+    ax.set_title("Proxemic Zone Distribution")
+    ax.set_xticks(x)
+    ax.set_xticklabels([nm.replace("_", "\n")[:12] for nm in names],
+                       fontsize=7, rotation=45, ha="right")
+    ax.legend(fontsize=7, loc="upper right")
+    ax.set_ylim(0, 105)
+
+    plt.tight_layout()
+    plt.savefig(output_dir / "distributions_dashboard.png", dpi=150, bbox_inches="tight")
+    plt.close()
+
+    print(f"  Plots saved to {output_dir}/")
+
+
+def plot_environment_summary(env_name: str, phase_data: Dict[str, Dict[str, CrowdMetrics]],
+                             output_dir: Path):
+    """Generate a cross-phase comparison figure for one environment.
+
+    Args:
+        env_name: e.g. "central_tunnel"
+        phase_data: {phase_label: {run_name: CrowdMetrics, ...}, ...}
+        output_dir: where to save the PNG
+    """
     if not HAS_MPL:
         return
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. Speed distributions
-    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
-    fig.suptitle("Speed Distributions (Ground Truth vs Simulation)", fontsize=14)
-    axes = axes.flatten()
-    for i, (name, metrics) in enumerate(all_metrics.items()):
-        if i >= len(axes):
-            break
-        ax = axes[i]
-        if metrics.speed_distribution:
-            ax.hist(metrics.speed_distribution, bins=50, density=True,
-                    alpha=0.6, color="steelblue", label="Ground Truth")
-        if sim_metrics and name in sim_metrics and sim_metrics[name].speed_distribution:
-            ax.hist(sim_metrics[name].speed_distribution, bins=50, density=True,
-                    alpha=0.6, color="coral", label="Simulation")
-        ax.set_title(name, fontsize=10)
-        ax.set_xlabel("Speed (m/s)")
-        ax.set_ylabel("Density")
-        ax.legend(fontsize=8)
-        ax.set_xlim(0, 4)
-    # hide unused axes
-    for j in range(i + 1, len(axes)):
-        axes[j].set_visible(False)
-    plt.tight_layout()
-    plt.savefig(output_dir / "speed_distributions.png", dpi=150)
-    plt.close()
+    # Compute phase averages
+    phase_labels = list(phase_data.keys())
+    phase_avgs = {}
+    for phase, runs in phase_data.items():
+        avg = {}
+        for key in CrowdMetrics.__dataclass_fields__:
+            vals = [getattr(m, key, 0) for m in runs.values()
+                    if isinstance(getattr(m, key, None), (int, float))]
+            avg[key] = float(np.mean(vals)) if vals else 0.0
+        phase_avgs[phase] = avg
 
-    # 2. Minimum inter-agent distance distributions
-    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
-    fig.suptitle("Minimum Inter-Agent Distance Distributions", fontsize=14)
-    axes = axes.flatten()
-    for i, (name, metrics) in enumerate(all_metrics.items()):
-        if i >= len(axes):
-            break
-        ax = axes[i]
-        if metrics.min_distance_distribution:
-            data = [d for d in metrics.min_distance_distribution if d < 10]
-            ax.hist(data, bins=60, density=True, alpha=0.6,
-                    color="steelblue", label="Ground Truth")
-        if sim_metrics and name in sim_metrics and sim_metrics[name].min_distance_distribution:
-            data = [d for d in sim_metrics[name].min_distance_distribution if d < 10]
-            ax.hist(data, bins=60, density=True, alpha=0.6,
-                    color="coral", label="Simulation")
-        ax.axvline(x=COLLISION_RADIUS, color="red", linestyle="--", alpha=0.7, label=f"Collision ({COLLISION_RADIUS}m)")
-        ax.axvline(x=NEAR_MISS_RADIUS, color="orange", linestyle="--", alpha=0.7, label=f"Near-miss ({NEAR_MISS_RADIUS}m)")
-        ax.set_title(name, fontsize=10)
-        ax.set_xlabel("Min distance to nearest agent (m)")
-        ax.set_ylabel("Density")
-        ax.legend(fontsize=7)
-        ax.set_xlim(0, 10)
-    for j in range(i + 1, len(axes)):
-        axes[j].set_visible(False)
-    plt.tight_layout()
-    plt.savefig(output_dir / "min_distance_distributions.png", dpi=150)
-    plt.close()
-
-    # 3. Fundamental diagram (density vs flow)
-    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
-    fig.suptitle("Fundamental Diagram: Density vs Flow", fontsize=14)
-    axes = axes.flatten()
-    for i, (name, metrics) in enumerate(all_metrics.items()):
-        if i >= len(axes):
-            break
-        ax = axes[i]
-        if metrics.density_flow_points:
-            densities = [p[0] for p in metrics.density_flow_points]
-            flows = [p[1] for p in metrics.density_flow_points]
-            ax.scatter(densities, flows, alpha=0.3, s=5, c="steelblue", label="Ground Truth")
-        if sim_metrics and name in sim_metrics and sim_metrics[name].density_flow_points:
-            densities = [p[0] for p in sim_metrics[name].density_flow_points]
-            flows = [p[1] for p in sim_metrics[name].density_flow_points]
-            ax.scatter(densities, flows, alpha=0.3, s=5, c="coral", label="Simulation")
-        ax.set_title(name, fontsize=10)
-        ax.set_xlabel("Density (agents/m²)")
-        ax.set_ylabel("Flow (agents/m/s)")
-        ax.legend(fontsize=8)
-    for j in range(i + 1, len(axes)):
-        axes[j].set_visible(False)
-    plt.tight_layout()
-    plt.savefig(output_dir / "fundamental_diagram.png", dpi=150)
-    plt.close()
-
-    # 4. Summary bar chart comparing key metrics across datasets
-    fig, axes = plt.subplots(2, 3, figsize=(18, 10))
-    fig.suptitle("Key Metrics Comparison Across Datasets", fontsize=14)
-    metric_labels = [
-        ("speed_mean", "Mean Speed (m/s)"),
-        ("path_efficiency_mean", "Path Efficiency"),
-        ("min_inter_agent_dist_mean", "Mean Min Distance (m)"),
-        ("collision_rate", "Collision Rate (/agent/s)"),
-        ("speed_variability_mean", "Speed CV"),
-        ("heading_jerk_mean", "Heading Jerk (smoothness)"),
+    # ── Figure: Cross-Phase Comparison (5 rows × 4 cols = 20 panels) ─────
+    metric_specs = [
+        # Row 1
+        ("speed_mean",                 "Speed Mean (m/s)"),
+        ("speed_std",                  "Speed Std (m/s)"),
+        ("collision_rate",             "Collision Rate"),
+        ("near_miss_rate",             "Near-Miss Rate"),
+        # Row 2
+        ("path_efficiency_mean",       "Path Efficiency"),
+        ("speed_variability_mean",     "Speed CV"),
+        ("heading_jerk_mean",          "Heading Jerk"),
+        ("acceleration_mean",          "Accel (m/s²)"),
+        # Row 3
+        ("min_inter_agent_dist_mean",  "Min Dist μ (m)"),
+        ("min_inter_agent_dist_p5",    "Min Dist p5 (m)"),
+        ("ttc_mean",                   "TTC Mean (s)"),
+        ("ttc_p10",                    "TTC p10 (s)"),
+        # Row 4
+        ("stuck_rate",                 "Stuck Rate"),
+        ("oscillation_index_mean",     "Osc Index (rev/m)"),
+        ("translational_jerk_mean",    "Trans Jerk (m/s³)"),
+        ("ttc_median",                 "TTC Median (s)"),
+        # Row 5
+        ("mean_density",               "Density (ag/m²)"),
+        ("mean_flow",                  "Flow (ag/m/s)"),
+        ("total_collisions",           "Total Collisions"),
+        ("total_near_misses",          "Total Near-Misses"),
     ]
-    axes = axes.flatten()
-    names = list(all_metrics.keys())
-    for i, (key, label) in enumerate(metric_labels):
-        ax = axes[i]
-        gt_vals = [getattr(all_metrics[n], key, 0) for n in names]
-        x = np.arange(len(names))
-        width = 0.35
-        ax.bar(x - width/2, gt_vals, width, label="Ground Truth", color="steelblue")
-        if sim_metrics:
-            sim_vals = [getattr(sim_metrics.get(n, CrowdMetrics()), key, 0) for n in names]
-            ax.bar(x + width/2, sim_vals, width, label="Simulation", color="coral")
-        ax.set_ylabel(label)
-        ax.set_xticks(x)
-        ax.set_xticklabels([n.replace("_", "\n") for n in names], fontsize=7, rotation=45)
-        ax.legend(fontsize=8)
-    plt.tight_layout()
-    plt.savefig(output_dir / "metrics_comparison.png", dpi=150)
-    plt.close()
 
-    print(f"  Plots saved to {output_dir}/")
+    n_phases = len(phase_labels)
+    x = np.arange(n_phases)
+    short_labels = []
+    colors = []
+    for pl in phase_labels:
+        # Extract the short phase name from e.g. "cafe_baseline" -> "baseline"
+        parts = pl.split("_")
+        # Find env-specific prefix length, then take the rest
+        short = pl.replace(env_name + "_", "")
+        short_labels.append(short.replace("_", "\n"))
+        # Match to phase color
+        matched = False
+        for pkey, pcol in _PHASE_COLORS.items():
+            if pkey in pl:
+                colors.append(pcol)
+                matched = True
+                break
+        if not matched:
+            colors.append("#888888")
+
+    fig, axes = plt.subplots(5, 4, figsize=(20, 20))
+    display_name = env_name.replace("_", " ").title()
+    fig.suptitle(f"{display_name} — OAT Phase Comparison", fontsize=16, fontweight="bold", y=0.98)
+    axes = axes.flatten()
+
+    for idx, (key, label) in enumerate(metric_specs):
+        ax = axes[idx]
+        vals = [phase_avgs[pl].get(key, 0) for pl in phase_labels]
+        bars = ax.bar(x, vals, color=colors, edgecolor="white", linewidth=0.8, alpha=0.9)
+        ax.set_ylabel(label, fontsize=9)
+        ax.set_xticks(x)
+        ax.set_xticklabels(short_labels, fontsize=7, rotation=30, ha="right")
+        # Value labels
+        for bar_obj, v in zip(bars, vals):
+            if v != 0:
+                fmt = f"{v:.4f}" if abs(v) < 0.01 else (f"{v:.3f}" if abs(v) < 1 else f"{v:.2f}")
+                ax.text(bar_obj.get_x() + bar_obj.get_width()/2, bar_obj.get_height(),
+                        fmt, ha="center", va="bottom", fontsize=6.5, color="#333")
+        # Highlight baseline with a dashed line
+        if vals:
+            ax.axhline(y=vals[0], color="#cccccc", linestyle="--", linewidth=0.8, alpha=0.6)
+
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    outpath = output_dir / f"{env_name}_phase_comparison.png"
+    plt.savefig(outpath, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"  Phase comparison saved to {outpath}")
+
+    # ── Proxemic Zone Comparison (stacked bar, one per phase) ────────────
+    fig, ax = plt.subplots(figsize=(10, 6))
+    fig.suptitle(f"{display_name} — Proxemic Zone Distribution by Phase",
+                 fontsize=14, fontweight="bold")
+    prox_keys = ["proxemic_intimate_fraction", "proxemic_personal_fraction",
+                 "proxemic_social_fraction", "proxemic_public_fraction"]
+    bottom = np.zeros(n_phases)
+    for k_idx, pk in enumerate(prox_keys):
+        vals = [phase_avgs[pl].get(pk, 0) * 100 for pl in phase_labels]
+        ax.bar(x, vals, bottom=bottom, color=_PROX_COLORS[k_idx],
+               label=_PROX_LABELS[k_idx].replace("\n", " "), edgecolor="white", linewidth=0.5)
+        # Add percentage text in each segment if > 3%
+        for xi, v in enumerate(vals):
+            if v > 3:
+                ax.text(xi, bottom[xi] + v/2, f"{v:.1f}%", ha="center", va="center",
+                        fontsize=7, color="white" if k_idx in (0, 3) else "#333",
+                        fontweight="bold")
+        bottom += np.array(vals)
+    ax.set_ylabel("% of Agent-Frame Observations", fontsize=10)
+    ax.set_xticks(x)
+    ax.set_xticklabels(short_labels, fontsize=9, rotation=30, ha="right")
+    ax.legend(fontsize=9, loc="upper right")
+    ax.set_ylim(0, 105)
+    plt.tight_layout()
+    outpath = output_dir / f"{env_name}_proxemic_comparison.png"
+    plt.savefig(outpath, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"  Proxemic comparison saved to {outpath}")
+
+
+def plot_cross_environment(env_data: Dict[str, Dict[str, float]],
+                           gt_data: Dict[str, Dict[str, float]],
+                           output_dir: Path):
+    """Generate a cross-environment + ground truth comparison figure.
+
+    Args:
+        env_data: {env_name: {metric: avg_baseline_value, ...}}
+        gt_data: {dataset_name: {metric: value, ...}}
+        output_dir: where to save
+    """
+    if not HAS_MPL:
+        return
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # ── Figure: Sim Baselines vs GT (4×4 = 16 panels) ──────────────────
+    metric_specs = [
+        ("speed_mean",                 "Speed\n(m/s)"),
+        ("speed_std",                  "Speed σ\n(m/s)"),
+        ("collision_rate",             "Collision\nRate"),
+        ("near_miss_rate",             "Near-Miss\nRate"),
+        ("path_efficiency_mean",       "Path\nEfficiency"),
+        ("speed_variability_mean",     "Speed\nCV"),
+        ("heading_jerk_mean",          "Heading\nJerk"),
+        ("acceleration_mean",          "Accel\n(m/s²)"),
+        ("min_inter_agent_dist_mean",  "Min Dist\n(m)"),
+        ("ttc_mean",                   "TTC Mean\n(s)"),
+        ("ttc_p10",                    "TTC p10\n(s)"),
+        ("stuck_rate",                 "Stuck\nRate"),
+        ("oscillation_index_mean",     "Osc\nIndex"),
+        ("translational_jerk_mean",    "Trans\nJerk"),
+        ("mean_density",               "Density\n(ag/m²)"),
+        ("mean_flow",                  "Flow\n(ag/m/s)"),
+    ]
+
+    sources = list(env_data.keys())  # sim environments
+    gt_names = list(gt_data.keys())  # GT datasets
+
+    # Compute GT mean for reference line (all numeric keys, not just metric_specs)
+    gt_mean = {}
+    all_gt_keys = set()
+    for ds in gt_names:
+        all_gt_keys.update(gt_data[ds].keys())
+    for key in all_gt_keys:
+        gt_vals = [gt_data[ds].get(key, 0) for ds in gt_names
+                   if isinstance(gt_data[ds].get(key), (int, float)) and gt_data[ds].get(key, 0) != 0]
+        gt_mean[key] = float(np.mean(gt_vals)) if gt_vals else 0
+
+    fig, axes = plt.subplots(4, 4, figsize=(24, 16))
+    fig.suptitle("Cross-Environment Baseline Comparison vs Ground Truth",
+                 fontsize=16, fontweight="bold", y=0.98)
+    axes = axes.flatten()
+
+    for idx, (key, label) in enumerate(metric_specs):
+        ax = axes[idx]
+
+        # GT datasets as individual bars
+        gt_vals = [gt_data[ds].get(key, 0) for ds in gt_names]
+        gt_x = np.arange(len(gt_names))
+        ax.bar(gt_x, gt_vals, color="#90A4AE", alpha=0.7, width=0.7, edgecolor="white")
+
+        # Sim baselines as coloured bars after GT
+        sim_x = np.arange(len(gt_names), len(gt_names) + len(sources))
+        sim_vals = [env_data[s].get(key, 0) for s in sources]
+        sim_colors = [_ENV_COLORS.get(s, "#888") for s in sources]
+        bars = ax.bar(sim_x, sim_vals, color=sim_colors, alpha=0.9, width=0.7, edgecolor="white")
+
+        # GT mean reference line
+        if gt_mean[key] > 0:
+            ax.axhline(y=gt_mean[key], color="#FF6F00", linestyle="--", linewidth=1.5,
+                       alpha=0.7, label=f"GT Mean: {gt_mean[key]:.3f}")
+            ax.legend(fontsize=6, loc="best")
+
+        all_labels = [ds.replace("_", "\n")[:10] for ds in gt_names] + \
+                     [s.replace("_", "\n") for s in sources]
+        ax.set_xticks(np.arange(len(all_labels)))
+        ax.set_xticklabels(all_labels, fontsize=5.5, rotation=45, ha="right")
+        ax.set_title(label, fontsize=9, fontweight="bold")
+        ax.tick_params(axis="y", labelsize=7)
+
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    outpath = output_dir / "cross_environment_vs_gt.png"
+    plt.savefig(outpath, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"  Cross-environment comparison saved to {outpath}")
+
+    # ── Proxemic Zone Comparison: GT mean vs all 3 sim baselines ─────────
+    fig, ax = plt.subplots(figsize=(10, 6))
+    fig.suptitle("Proxemic Zone Distribution — Ground Truth vs Simulated Baselines",
+                 fontsize=14, fontweight="bold")
+    prox_keys = ["proxemic_intimate_fraction", "proxemic_personal_fraction",
+                 "proxemic_social_fraction", "proxemic_public_fraction"]
+
+    bar_labels = ["GT Mean"] + [s.replace("_", " ").title() for s in sources]
+    n_bars = len(bar_labels)
+    x = np.arange(n_bars)
+    bottom = np.zeros(n_bars)
+    for k_idx, pk in enumerate(prox_keys):
+        gt_val = gt_mean.get(pk, 0) * 100
+        sim_vals = [env_data[s].get(pk, 0) * 100 for s in sources]
+        vals = [gt_val] + sim_vals
+        ax.bar(x, vals, bottom=bottom, color=_PROX_COLORS[k_idx],
+               label=_PROX_LABELS[k_idx].replace("\n", " "), edgecolor="white", linewidth=0.5)
+        for xi, v in enumerate(vals):
+            if v > 3:
+                ax.text(xi, bottom[xi] + v/2, f"{v:.1f}%", ha="center", va="center",
+                        fontsize=8, color="white" if k_idx in (0, 3) else "#333",
+                        fontweight="bold")
+        bottom += np.array(vals)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(bar_labels, fontsize=10)
+    ax.set_ylabel("% of Agent-Frame Observations", fontsize=11)
+    ax.legend(fontsize=10, loc="upper right")
+    ax.set_ylim(0, 105)
+    plt.tight_layout()
+    outpath = output_dir / "proxemic_gt_vs_sim.png"
+    plt.savefig(outpath, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"  Proxemic GT vs Sim saved to {outpath}")
 
 
 # ---------------------------------------------------------------------------
@@ -807,6 +1254,28 @@ def print_summary(all_metrics: Dict[str, CrowdMetrics]):
               f"{m.collision_rate:>7.4f} {m.near_miss_rate:>7.4f} " \
               f"{m.acceleration_mean:>6.2f} {m.heading_jerk_mean:>7.3f} " \
               f"{m.mean_density:>6.3f} {m.mean_flow:>6.3f}"
+        print(row)
+
+    print("-" * 120)
+
+    # V2 Metrics table
+    print("\n" + "=" * 120)
+    print("V2 METRICS (Extended)")
+    print("=" * 120)
+    v2_header = f"{'Dataset':<16} {'TTC μ':>7} {'TTC med':>8} {'TTC p10':>8} " \
+                f"{'Stuck%':>7} {'OscIdx':>7} {'TrJerk':>7} " \
+                f"{'%Intim':>7} {'%Pers':>7} {'%Social':>8} {'%Public':>8}"
+    print(v2_header)
+    print("-" * 120)
+
+    for name, m in all_metrics.items():
+        row = f"{name:<16} {m.ttc_mean:>7.2f} {m.ttc_median:>8.2f} {m.ttc_p10:>8.2f} " \
+              f"{m.stuck_rate * 100:>6.1f}% {m.oscillation_index_mean:>7.3f} " \
+              f"{m.translational_jerk_mean:>7.2f} " \
+              f"{m.proxemic_intimate_fraction * 100:>6.1f}% " \
+              f"{m.proxemic_personal_fraction * 100:>6.1f}% " \
+              f"{m.proxemic_social_fraction * 100:>7.1f}% " \
+              f"{m.proxemic_public_fraction * 100:>7.1f}%"
         print(row)
 
     print("-" * 120)
@@ -876,6 +1345,12 @@ def main():
                         help="Skip plot generation")
     parser.add_argument("--dt", type=float, default=0.4,
                         help="Time delta (seconds) for custom datasets (default: 0.4)")
+    parser.add_argument("--env-summary", type=str, default=None,
+                        help="Generate cross-phase comparison for an environment. "
+                             "Value is the sim_results/<env> directory path.")
+    parser.add_argument("--cross-env", type=str, default=None,
+                        help="Generate cross-environment comparison. "
+                             "Value is the sim_results/ root directory path.")
     args = parser.parse_args()
 
     # Determine output directory
@@ -957,7 +1432,7 @@ def main():
         d.pop("acceleration_distribution", None)
         json_out[name] = d
 
-    json_path = output_dir / "ground_truth_metrics.json"
+    json_path = output_dir / "crowd_metrics.json"
     with open(json_path, "w") as f:
         json.dump(json_out, f, indent=2)
     print(f"  Metrics saved to {json_path}")
@@ -992,8 +1467,85 @@ def main():
                           f"SIM={vals['simulation']:.4f}  err={vals['percent_error']:.1f}%")
 
     # Generate plots
-    if not args.no_plots:
+    if not args.no_plots and not args.env_summary and not args.cross_env:
         plot_metrics(all_metrics, output_dir, sim_metrics)
+
+    # ── Environment-level cross-phase summary ─────────────────────────────
+    if args.env_summary:
+        env_dir = Path(args.env_summary)
+        env_name = env_dir.name  # e.g. "cafe"
+        phase_data: Dict[str, Dict[str, CrowdMetrics]] = {}
+        for phase_dir in sorted(env_dir.iterdir()):
+            if not phase_dir.is_dir():
+                continue
+            json_path = phase_dir / "analysis" / "crowd_metrics.json"
+            if not json_path.exists():
+                continue
+            with open(json_path) as f:
+                data = json.load(f)
+            phase_metrics = {}
+            for run_name, d in data.items():
+                m = CrowdMetrics(**{k: v for k, v in d.items()
+                                    if k in CrowdMetrics.__dataclass_fields__})
+                phase_metrics[run_name] = m
+            phase_data[phase_dir.name] = phase_metrics
+            print(f"  Loaded {phase_dir.name}: {len(phase_metrics)} runs")
+
+        if phase_data:
+            summary_dir = env_dir / "summary"
+            plot_environment_summary(env_name, phase_data, summary_dir)
+        else:
+            print(f"  No phase data found in {env_dir}")
+
+    # ── Cross-environment + GT comparison ─────────────────────────────────
+    if args.cross_env:
+        sim_root = Path(args.cross_env)
+        env_baselines: Dict[str, Dict[str, float]] = {}
+
+        for env_dir in sorted(sim_root.iterdir()):
+            if not env_dir.is_dir():
+                continue
+            env_name = env_dir.name
+            # Find baseline directory
+            baseline_dir = None
+            for sub in env_dir.iterdir():
+                if sub.is_dir() and "baseline" in sub.name:
+                    baseline_dir = sub
+                    break
+            if baseline_dir is None:
+                continue
+            json_path = baseline_dir / "analysis" / "crowd_metrics.json"
+            if not json_path.exists():
+                continue
+            with open(json_path) as f:
+                data = json.load(f)
+            # Average across runs
+            avg = {}
+            for key in CrowdMetrics.__dataclass_fields__:
+                vals = [d.get(key, 0) for d in data.values()
+                        if isinstance(d.get(key), (int, float))]
+                avg[key] = float(np.mean(vals)) if vals else 0.0
+            env_baselines[env_name] = avg
+            print(f"  Loaded baseline for {env_name}: {len(data)} runs")
+
+        # Load GT data
+        gt_json = DATASETS_DIR / "results" / "crowd_metrics.json"
+        gt_data: Dict[str, Dict[str, float]] = {}
+        if gt_json.exists():
+            with open(gt_json) as f:
+                raw_gt = json.load(f)
+            for ds_name, d in raw_gt.items():
+                gt_data[ds_name] = {k: v for k, v in d.items()
+                                    if isinstance(v, (int, float))}
+            print(f"  Loaded GT: {len(gt_data)} datasets")
+
+        if env_baselines and gt_data:
+            summary_dir = sim_root / "summary"
+            plot_cross_environment(env_baselines, gt_data, summary_dir)
+        elif env_baselines:
+            print("  Warning: GT data not found, skipping cross-environment plot")
+        else:
+            print(f"  No baseline data found in {sim_root}")
 
     print("\nDone.")
     print(f"Results saved to: {output_dir.resolve()}")
