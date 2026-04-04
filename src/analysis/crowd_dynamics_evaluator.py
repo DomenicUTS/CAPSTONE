@@ -34,9 +34,9 @@ Output
 
 Usage
 -----
-  python3 ground_truth_analysis.py                       # analyze all datasets
-  python3 ground_truth_analysis.py --dataset eth_univ    # analyze one dataset
-  python3 ground_truth_analysis.py --sim-json <path>     # compare against simulation
+  python3 crowd_dynamics_evaluator.py                       # analyze all datasets
+  python3 crowd_dynamics_evaluator.py --dataset eth_univ    # analyze one dataset
+  python3 crowd_dynamics_evaluator.py --sim-json <path>     # compare against simulation
 """
 
 import argparse
@@ -62,8 +62,9 @@ except ImportError:
 # Constants
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
+DATASETS_DIR = SCRIPT_DIR.parent / "DATASETS"
 
-# Each entry: (label, relative_path, dt_seconds)
+# Each entry: (label, relative_path_from_DATASETS_DIR, dt_seconds)
 DATASET_REGISTRY = [
     ("eth_hotel",  "eth/hotel/true_pos_.csv",             0.4),
     ("eth_univ",   "eth/univ/true_pos_.csv",              0.4),
@@ -885,7 +886,7 @@ def main():
         output_dir = Path(args.output_dir)
     else:
         # For GT datasets, use DATASETS/results
-        output_dir = SCRIPT_DIR / "results"
+        output_dir = DATASETS_DIR / "results"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Load and analyze datasets
@@ -914,7 +915,7 @@ def main():
             if args.dataset and args.dataset != label:
                 continue
 
-            filepath = SCRIPT_DIR / rel_path
+            filepath = DATASETS_DIR / rel_path
             if not filepath.exists():
                 print(f"  [SKIP] {label}: file not found at {filepath}")
                 continue
@@ -924,7 +925,7 @@ def main():
 
             # Load groups if available
             if label in GROUP_FILES:
-                gpath = SCRIPT_DIR / GROUP_FILES[label]
+                gpath = DATASETS_DIR / GROUP_FILES[label]
                 if gpath.exists():
                     td.groups = load_groups(str(gpath))
                     print(f"         loaded {len(td.groups)} groups")

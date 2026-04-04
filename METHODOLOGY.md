@@ -115,7 +115,7 @@ This script:
 ### Step 3: Analyze against ground truth
 
 ```bash
-python3 src/analysis/ground_truth_analysis.py \
+python3 src/analysis/crowd_dynamics_evaluator.py \
   --custom-dataset run_1 sim_results/central_tunnel/central_tunnel_baseline/run_1/true_pos_.csv \
   --custom-dataset run_2 sim_results/central_tunnel/central_tunnel_baseline/run_2/true_pos_.csv \
   --dt 0.1 --output-dir sim_analysis_ct_baseline

@@ -128,5 +128,5 @@ python3 plot_parameter_variation.py --env delta \
     --results-dir ../../sim_results/metrics
 
 # Ground truth comparison
-python3 ground_truth_analysis.py --custom-dataset ../../sim_results/metrics/run_*/people_log.csv \
+python3 crowd_dynamics_evaluator.py --custom-dataset ../../sim_results/metrics/run_*/people_log.csv \
     --label "Delta"

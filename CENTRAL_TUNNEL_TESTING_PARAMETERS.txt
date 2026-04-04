@@ -84,7 +84,7 @@ RECORDING PROCEDURE
    ros2 launch hunav_evaluator hunav_evaluator_launch.py
 
 7. Compare with ground truth:
-   python3 src/analysis/ground_truth_analysis.py \
+   python3 src/analysis/crowd_dynamics_evaluator.py \
      --custom-dataset run_1 sim_results/central_tunnel/central_tunnel_baseline/run_1/true_pos_.csv
 
 ================================================================================

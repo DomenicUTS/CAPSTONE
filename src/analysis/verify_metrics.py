@@ -48,7 +48,7 @@ print(f"Duration: ({frames.max()} - {frames.min()}) * {DT} / {frame_step} = "
       f"{(frames.max() - frames.min()) * DT / frame_step:.1f} seconds")
 
 # ═══════════════════════════════════════════════════════════════════════════
-# COMPUTE VELOCITIES (finite differences — same logic as ground_truth_analysis.py)
+# COMPUTE VELOCITIES (finite differences — same logic as crowd_dynamics_evaluator.py)
 # ═══════════════════════════════════════════════════════════════════════════
 print("\n" + "─" * 80)
 print("VELOCITY COMPUTATION (finite differences)")

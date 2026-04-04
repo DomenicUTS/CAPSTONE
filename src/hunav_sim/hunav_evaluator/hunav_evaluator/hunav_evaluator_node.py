@@ -378,7 +378,7 @@ class HunavEvaluatorNode(Node):
         """Export raw agent trajectories in ETH/UCY format (frame, ped_id, x, y).
         
         Saves to: run_D/true_pos_.csv where D is the run_id
-        Format matches ETH/UCY datasets so ground_truth_analysis.py can process it.
+        Format matches ETH/UCY datasets so crowd_dynamics_evaluator.py can process it.
         """
         if not self.current_run_dir:
             self.get_logger().warn("No run directory set. Trajectories not exported.")

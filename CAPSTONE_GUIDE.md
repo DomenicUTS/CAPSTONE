@@ -83,7 +83,7 @@ Each phase multiplies one parameter by a fixed factor across all 40 agents:
 | 4 | Obstacle Force | × 0.50 | × 2.00 | Test wall avoidance in corridor |
 
 ### Evaluation Metrics
-Computed by `hunav_evaluator` and `ground_truth_analysis.py`:
+Computed by `hunav_evaluator` and `crowd_dynamics_evaluator.py`:
 - Speed distribution (mean, std, percentiles)
 - Collision rate, near-miss rate
 - Path efficiency (displacement / arc length)

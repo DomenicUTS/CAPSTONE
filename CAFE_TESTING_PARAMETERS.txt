@@ -191,7 +191,7 @@ For each run N (4-15):
 
 2. After each phase (every 4 runs):
    ```bash
-   python3 src/DATASETS/ground_truth_analysis.py \
+   python3 src/analysis/crowd_dynamics_evaluator.py \
      --custom-dataset run_4 results/run_4/true_pos_.csv \
      --custom-dataset run_5 results/run_5/true_pos_.csv \
      --custom-dataset run_6 results/run_6/true_pos_.csv \
