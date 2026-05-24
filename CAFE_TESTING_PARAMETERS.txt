@@ -1,239 +1,143 @@
 ================================================================================
-CAFE ENVIRONMENT — FULL OAT TESTING PARAMETERS
-================================================================================
-Project: Pedestrian Simulation Sensitivity Analysis
-Environment: Cafe (15m × 20m with tables/standing areas)
-Agents: 12 pedestrians (all scaled identically for each phase)
-Duration per run: 120 seconds
-Recording frequency: 10 Hz
-Total runs planned: 15 (3 baseline + 12 phase tests)
-
-================================================================================
-COMPREHENSIVE PARAMETER TABLE
+CAFÉ ENVIRONMENT — OAT TESTING PARAMETERS
 ================================================================================
 
-| Phase          | Runs | Config File                    | Social Force | Goal Force | Max Velocity | Obstacle Force | Notes |
-|----------------|------|--------------------------------|--------------|------------|--------------|-----------------|-------|
-| **BASELINE**   | 1-3  | cafe_oat_balanced_baseline.yaml| 9.15         | 2.73       | 1.0601 m/s   | 15.33 (avg)    | Reference/control (OLD - with confounds) |
-| **PHASE 1**    | 4-5  | cafe_oat_social_low.yaml       | **5.3** ×0.579 | 2.73     | 1.0601 m/s   | 15.33 (avg)    | SF only varied, all agents identical scaling |
-| **PHASE 1**    | 6-7  | cafe_oat_social_high.yaml      | **21.7** ×2.372| 2.73    | 1.0601 m/s   | 15.33 (avg)    | SF only varied, all agents identical scaling |
-| **PHASE 2**    | 8-9  | cafe_oat_goal_low.yaml         | 9.15         | **1.28** ×0.469 | 1.0601 m/s | 15.33 (avg)  | GF only varied, all agents identical scaling |
-| **PHASE 2**    | 10-11| cafe_oat_goal_high.yaml        | 9.15         | **5.55** ×2.033 | 1.0601 m/s | 15.33 (avg)  | GF only varied, all agents identical scaling |
-| **PHASE 3**    | 12-13| cafe_oat_speed_slow.yaml       | 9.15         | 2.73       | **0.545** ×0.514 | 15.33 (avg) | Speed only varied, all agents identical scaling |
-| **PHASE 3**    | 14-15| cafe_oat_speed_fast.yaml       | 9.15         | 2.73       | **1.41** ×1.330 | 15.33 (avg) | Speed only varied, all agents identical scaling |
+World file        : cafe.world (15 m × 20 m, indoor café with tables)
+Agents            : 12 pedestrians, random-crossing goals
+Configuration mode: 2 (BEH_CONF_RANDOM_NORMAL) — see note below
+Launch file       : cafe_no_robot.launch.py
+Scenario directory: src/hunav_gazebo_wrapper/scenarios/domenic/cafe/
+Duration per run  : 120 s, recorded at 10 Hz
+Total runs        : 15 (3 baseline + 4 per phase × 3 phases)
 
-**Scaling Applied:** Each parameter varies independently; other parameters locked to baseline values.
-**Agent Scaling:** All 12 agents scaled identically (Option A: deterministic) for clean OAT sensitivity analysis.
-**Obstacle Force:** Not varied (kept at baseline ~15.33 avg across agents) in this phase.
-**Other Force Factor:** Fixed at 20.0 for all configurations.
 
-================================================================================
-CAFE ENVIRONMENT — FULL OAT TESTING PARAMETERS
-================================================================================
-Project: Pedestrian Simulation Sensitivity Analysis
-Environment: Cafe (15m × 20m with tables/standing areas)
-Agents: 12 pedestrians
-Duration per run: 120 seconds
-Recording frequency: 10 Hz
-Total runs planned: 21
+--------------------------------------------------------------------------------
+1. CONFIGURATION-MODE CAVEAT
+--------------------------------------------------------------------------------
+Café YAMLs use behavior.configuration = 2, which causes hunav_loader to
+overwrite the YAML force factors with random-normal samples at every launch.
+Consequently:
 
-================================================================================
-BASELINE CONFIGURATION (Runs 1-3)
-================================================================================
+  • Phase 1 (social force) and Phase 2 (goal force) results reflect random
+    variation rather than the intended OAT scaling.
+  • Phase 3 (max_vel) is unaffected — max_vel is not overwritten by the
+    configuration mode — and its results are valid.
 
-Run ID          | 1, 2, 3
-Status          | ✅ COMPLETED
-Social Force    | 9.15 avg (agent-specific range: ~5.3-21.7 across agents)
-Goal Force      | 2.73 avg (agent-specific range: ~1.28-5.55 across agents)
-Max Velocity    | 1.06 m/s avg (agent-specific range: 0.55-1.41 m/s)
-Obstacle Force  | ~15.33 avg (fixed, not varied in this phase)
+The Central Tunnel and Delta environments use configuration = 1 (CUSTOM) to
+remove this confound and serve as the substantive OAT data.
 
-Baseline Results Summary:
-  Speed mean:           2.39-2.85 m/s (❌ too high, target 1.46)
-  Collision rate:       1.02-1.25 /agent/s (❌ critical, target ~0.0004)
-  Path efficiency:      0.052-0.076 (❌ poor, target 0.96)
-  Heading jerk:         0.71-0.75 rad/frame³ (❌ high, target 0.47)
-  Min distance:         1.07-1.13 m (acceptable)
 
-Config file: src/hunav_gazebo_wrapper/scenarios/domenic/cafe/cafe_oat_balanced_baseline.yaml
+--------------------------------------------------------------------------------
+2. BASELINE PARAMETERS (across all 12 agents)
+--------------------------------------------------------------------------------
+Social force factor   : mean 9.15, per-agent range ~5.3–21.7   (clamp [5.0, 20.0])
+Goal force factor     : mean 2.73, per-agent range ~1.28–5.55  (clamp [2.0,  5.0])
+Obstacle force factor : mean 15.33                              (clamp [2.0, 50.0])
+Max velocity          : mean 1.06 m/s, per-agent range 0.55–1.41 (clamp [0.0, 1.8])
+Other force factor    : fixed at 20.0 for all agents
 
-================================================================================
-PHASE 1: SOCIAL FORCE VARIATION (Runs 4-7)
-================================================================================
 
-Hypothesis: Tune person-person collision avoidance strength
+--------------------------------------------------------------------------------
+3. PHASE SCALING
+--------------------------------------------------------------------------------
+Each phase scales one parameter across every agent by a fixed factor. All
+other parameters remain at baseline.
 
-| Run  | Test # | Social Force | Goal Force | Max Velocity | Repeat | Rationale |
-|------|--------|--------------|------------|--------------|--------|-----------|
-| 4-5  | 4      | 5.3 (-42%)   | 2.73       | 1.06 m/s avg | 2×     | Weak avoidance - agents may ignore each other |
-| 6-7  | 6      | 21.7 (+137%) | 2.73       | 1.06 m/s avg | 2×     | Strong avoidance - agents freeze/detour excessively |
+  Phase 1 — Social force   low ×0.579   high ×2.372
+  Phase 2 — Goal force     low ×0.469   high ×2.033
+  Phase 3 — Max velocity   low ×0.700   high ×1.330
 
-Config files:
-  - Low (SF=5.3):   cafe_oat_social_low.yaml
-  - High (SF=21.7): cafe_oat_social_high.yaml
 
-Expected trend:
-  - Lower SF (5.3)    → Higher collisions, faster speeds, lower acceleration
-  - Higher SF (21.7)  → Lower collisions, slower speeds, more jerky motion
+--------------------------------------------------------------------------------
+4. RUN PLAN
+--------------------------------------------------------------------------------
+| Run    | Phase    | Configuration file                  | Parameter varied |
+|--------|----------|-------------------------------------|------------------|
+|  1–3   | Baseline | cafe_oat_balanced_baseline.yaml     | none (reference) |
+|  4–5   | Phase 1  | cafe_oat_social_low.yaml            | social × 0.579   |
+|  6–7   | Phase 1  | cafe_oat_social_high.yaml           | social × 2.372   |
+|  8–9   | Phase 2  | cafe_oat_goal_low.yaml              | goal × 0.469     |
+| 10–11  | Phase 2  | cafe_oat_goal_high.yaml             | goal × 2.033     |
+| 12–13  | Phase 3  | cafe_oat_speed_slow.yaml            | max_vel × 0.700  |
+| 14–15  | Phase 3  | cafe_oat_speed_fast.yaml            | max_vel × 1.330  |
 
-Decision criterion:
-  Find SF value where: collision_rate < 0.01 /agent/s AND path_efficiency > 0.5
 
-================================================================================
-PHASE 2: GOAL FORCE VARIATION (Runs 8-11)
-================================================================================
+--------------------------------------------------------------------------------
+5. LAUNCH COMMANDS
+--------------------------------------------------------------------------------
+Run headless (gui:=false) when recording — the Gazebo client adds noticeable
+load. Use the GUI only for visual inspection.
 
-Hypothesis: Tune goal-seeking strength to fix oscillation/path efficiency
+  source ~/sfm_ws_fresh/install/setup.bash
 
-| Run   | Test # | Social Force | Goal Force | Max Velocity | Repeat | Rationale |
-|-------|--------|--------------|------------|--------------|--------|-----------|
-| 8-9   | 8      | 9.15         | 1.28 (-53%)| 1.06 m/s avg | 2×     | Weak goal - agents wander, poor path efficiency |
-| 10-11 | 10     | 9.15         | 5.55 (+103%)| 1.06 m/s avg | 2×     | Strong goal - agents walk straighter lines |
+  # Baseline (runs 1–3)
+  ros2 launch hunav_gazebo_wrapper cafe_no_robot.launch.py \
+    configuration_file:=domenic/cafe/cafe_oat_balanced_baseline.yaml gui:=false
 
-Config files:
-  - Low (GF=1.28):   cafe_oat_goal_low.yaml
-  - High (GF=5.55):  cafe_oat_goal_high.yaml
+  # Phase 1 — social force low (runs 4–5)
+  ros2 launch hunav_gazebo_wrapper cafe_no_robot.launch.py \
+    configuration_file:=domenic/cafe/cafe_oat_social_low.yaml gui:=false
 
-Expected trend:
-  - Lower GF (1.28)    → Path efficiency drops, agents backtrack/circle
-  - Higher GF (5.55)   → Path efficiency rises, approaches straight-line navigation
+  # Phase 1 — social force high (runs 6–7)
+  ros2 launch hunav_gazebo_wrapper cafe_no_robot.launch.py \
+    configuration_file:=domenic/cafe/cafe_oat_social_high.yaml gui:=false
 
-Decision criterion:
-  Find GF value where: path_efficiency in range [0.85-0.95]
+  # Phase 2 — goal force low (runs 8–9)
+  ros2 launch hunav_gazebo_wrapper cafe_no_robot.launch.py \
+    configuration_file:=domenic/cafe/cafe_oat_goal_low.yaml gui:=false
 
-================================================================================
-PHASE 3: WALKING SPEED VARIATION (Runs 12-15)
-================================================================================
+  # Phase 2 — goal force high (runs 10–11)
+  ros2 launch hunav_gazebo_wrapper cafe_no_robot.launch.py \
+    configuration_file:=domenic/cafe/cafe_oat_goal_high.yaml gui:=false
 
-Hypothesis: Match realistic pedestrian walking pace (target: 1.46 m/s)
+  # Phase 3 — speed slow (runs 12–13)
+  ros2 launch hunav_gazebo_wrapper cafe_no_robot.launch.py \
+    configuration_file:=domenic/cafe/cafe_oat_speed_slow.yaml gui:=false
 
-| Run   | Test # | Social Force | Goal Force | Max Velocity | Repeat | Rationale |
-|-------|--------|--------------|------------|--------------|--------|-----------|
-| 12-13 | 12     | 9.15         | 2.73       | 0.545 m/s (-49%) | 2×  | Slow/elderly pace |
-| 14-15 | 14     | 9.15         | 2.73       | 1.41 m/s (+33%) | 2×   | Fast/hurried pace |
+  # Phase 3 — speed fast (runs 14–15)
+  ros2 launch hunav_gazebo_wrapper cafe_no_robot.launch.py \
+    configuration_file:=domenic/cafe/cafe_oat_speed_fast.yaml gui:=false
 
-Config files:
-  - Low/Slow (Speed=0.545): cafe_oat_speed_slow.yaml
-  - High/Fast (Speed=1.41): cafe_oat_speed_fast.yaml
 
-Expected trend:
-  - Lower speed (0.545) → speed_mean ≈ 0.3-0.4 m/s, smooth motion, low acceleration
-  - Higher speed (1.41) → speed_mean ≈ 0.8-1.0 m/s, more abrupt changes
+--------------------------------------------------------------------------------
+6. RECORDING (per run)
+--------------------------------------------------------------------------------
+In a second terminal, after the simulation has finished loading:
 
-Decision criterion:
-  Find speed value where: speed_mean in range [1.0-1.5] m/s (target: 1.46)
+  source ~/sfm_ws_fresh/install/setup.bash
+  python3 src/analysis/run_recording.py <run_id>
 
-================================================================================
-SUMMARY: CAFE FULL PLAN
-================================================================================
+Output is written to:
+  sim_results/cafe/<phase_dir>/run_<run_id>/true_pos_.csv
 
-Phase 0: Baseline             3 runs (completed: runs 1-3)
-Phase 1: Social Force         4 runs (2 configs × 2 repeats each)
-Phase 2: Goal Force           4 runs (2 configs × 2 repeats each)
-Phase 3: Speed                4 runs (2 configs × 2 repeats each)
----------
-Total Cafe Phase 1-3:        12 runs (~2-2.5 hours at 10-15 min per run)
 
-REPLICATION STRATEGY:
-Each YAML configuration (low/slow and high/fast) is run TWICE to:
-  - Capture stochastic variation in agent behavior
-  - Establish confidence intervals for each parameter level
-  - Identify if observed effects are consistent or noise-driven
-  - Provide empirical variance estimates for sensitivity analysis
+--------------------------------------------------------------------------------
+7. PER-PHASE ANALYSIS
+--------------------------------------------------------------------------------
+After all runs in a phase complete, build that phase's dashboard:
 
-Baseline (runs 1-3) already completed; phases 1-3 compare low vs high variants only.
+  python3 src/analysis/crowd_dynamics_evaluator.py \
+    --custom-dataset run_1 sim_results/cafe/cafe_baseline/run_1/true_pos_.csv \
+    --custom-dataset run_2 sim_results/cafe/cafe_baseline/run_2/true_pos_.csv \
+    --custom-dataset run_3 sim_results/cafe/cafe_baseline/run_3/true_pos_.csv \
+    --output-dir sim_results/cafe/cafe_baseline/analysis --dt 0.1
 
-Next environments after café completion:
-  • Warehouse (25m × 15m, sparse)
-  • Central Tunnel (high-density corridor)
+To regenerate every figure across all environments in one pass:
+  bash regenerate_all_plots.sh
 
-Same 12-run plan repeated for each environment.
 
-================================================================================
-TESTING WORKFLOW
-================================================================================
-
-IMPORTANT: Each YAML configuration file is run TWICE consecutively to establish
-empirical variance and parameter effects. Do not change configurations between
-duplicate runs - keep the same YAML file loaded in Terminal 1.
-
-PHASE 1 CONFIG MAPPING (Runs 4-7):
-  Runs 4-5:   cafe_oat_social_low.yaml    (SF=5.3, -42%)         [2 repeats]
-  Runs 6-7:   cafe_oat_social_high.yaml   (SF=21.7, +137%)        [2 repeats]
-
-PHASE 2 CONFIG MAPPING (Runs 8-11):
-  Runs 8-9:   cafe_oat_goal_low.yaml      (GF=1.28, -53%)         [2 repeats]
-  Runs 10-11: cafe_oat_goal_high.yaml     (GF=5.55, +103%)        [2 repeats]
-
-PHASE 3 CONFIG MAPPING (Runs 12-15):
-  Runs 12-13: cafe_oat_speed_slow.yaml    (Speed=0.545 m/s, -49%)[2 repeats]
-  Runs 14-15: cafe_oat_speed_fast.yaml    (Speed=1.41 m/s, +33%) [2 repeats]
-
-For each run N (4-15):
-   
-   Terminal 1 - Launch simulator:
-   ```bash
-   cd ~/sfm_ws_fresh && source install/setup.bash
-   ros2 launch hunav_gazebo_wrapper cafe_no_robot.launch.py \
-     configuration_file:=domenic/cafe/<CONFIG_FILE>
-   ```
-   
-   Terminal 2 - Record (after ~10 sec sim load):
-   ```bash
-   cd ~/sfm_ws_fresh && source install/setup.bash
-   python3 run_recording.py <N>
-   ```
-   
-   Terminal 3 - Stop (after 120-130 seconds):
-   Output saved to: results/run_<N>/true_pos_.csv
-   
-   (Do NOT stop simulator or change config - just restart recording for repeat)
-
-2. After each phase (every 4 runs):
-   ```bash
-   python3 src/analysis/crowd_dynamics_evaluator.py \
-     --custom-dataset run_4 results/run_4/true_pos_.csv \
-     --custom-dataset run_5 results/run_5/true_pos_.csv \
-     --custom-dataset run_6 results/run_6/true_pos_.csv \
-     --custom-dataset run_7 results/run_7/true_pos_.csv \
-     --output-dir sim_analysis_cafe_phase_<NUMBER>
-   ```
-
-3. Review metrics JSON and plots in sim_analysis_cafe_phase_<N>/
-
-================================================================================
-GROUND TRUTH TARGETS (from ETH/UCY benchmark)
-================================================================================
-
-Metric                    | Ground Truth  | Current (Baseline) | Target for Cafe
---------------------------|---------------|--------------------|------------------
-Speed mean                | 1.46 m/s      | 2.54 m/s           | 1.0-1.5 m/s
-Speed std                 | 0.41 m/s      | 1.65 m/s           | 0.3-0.5 m/s
-Collision rate            | 0.0004        | 1.08               | < 0.01 /agent/s
-Near-miss rate            | 0.014         | 5.58               | < 0.5 /agent/s
-Path efficiency           | 0.966         | 0.055              | 0.85-0.95
-Heading jerk              | 0.47          | 0.72               | 0.4-0.6 rad/frame³
-Speed variability (CV)    | 0.163         | 0.46               | 0.15-0.35
-Acceleration              | 0.74 m/s²     | 6.13 m/s²          | 0.5-1.5 m/s²
-Min distance mean         | 1.88 m        | 1.07 m             | 1.0-1.5 m ✓
-Min distance p5           | 0.60 m        | 0.37 m             | > 0.3 m ✓
-
-Notes:
-  ✓ = acceptable (already close to target)
-  ❌ = needs tuning via parameter variations
-
-================================================================================
-END OF PARAMETERS DOCUMENT
-================================================================================
-Generated: 29 March 2026
-Last updated: Parameters revised to 4 runs per phase (low/fast and high/fast only)
-Next action: Start Phase 1 (Social Force variation) - Runs 4-7
-
-IMPLEMENTATION NOTES:
-- All parameter values listed are extracted from scenario YAML files
-- Each agent has individual parameter assignments (slight variations across 12 agents)
-- Percentages (+/-) shown are relative to baseline agent1 values
-- Config files in: src/hunav_gazebo_wrapper/scenarios/domenic/cafe/
-- Baseline results from SI 2024 technical report (runs 1-3) - completed
-- Phases 1-3 test low vs high variants (12 total runs)
-- Ready for execution: all config files exist, run_recording.py parameterized
+--------------------------------------------------------------------------------
+8. GROUND-TRUTH REFERENCE (ETH/UCY)
+--------------------------------------------------------------------------------
+| Metric                | Ground truth | Acceptable range for café |
+|-----------------------|--------------|----------------------------|
+| Speed mean            | 1.46 m/s     | 1.0–1.5 m/s                |
+| Speed std             | 0.41 m/s     | 0.3–0.5 m/s                |
+| Collision rate        | 0.0004 /ag/s | < 0.01 /ag/s               |
+| Near-miss rate        | 0.014 /ag/s  | < 0.5 /ag/s                |
+| Path efficiency       | 0.966        | 0.85–0.95                  |
+| Heading jerk          | 0.467 rad/f³ | 0.4–0.6 rad/f³             |
+| Speed variability CV  | 0.163        | 0.15–0.35                  |
+| Acceleration          | 0.74 m/s²    | 0.5–1.5 m/s²               |
+| Min inter-agent dist  | 1.88 m       | 1.0–1.5 m                  |
+| Min distance p5       | 0.60 m       | > 0.3 m                    |

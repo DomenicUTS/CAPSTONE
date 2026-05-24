@@ -510,3 +510,19 @@ The BT system looks for `<install>/behavior_trees/{yaml_base_name}__agent_{id}_b
     ├── central_tunnel/        # 19 runs + per-phase analysis/
     └── delta/                 # 19 runs + per-phase analysis/
 ```
+
+---
+
+## Acknowledgements
+
+Anthropic's **Claude Opus 4.6** and **Claude Opus 4.7** contributed heavily to this codebase. In particular, they were used to:
+
+- Generate the analysis and plotting pipeline (`src/analysis/crowd_dynamics_evaluator.py`, `plot_parameter_variation.py`, `verify_metrics.py`) and the `regenerate_all_plots.sh` orchestration.
+- Implement the metric equations — speed/CV, collision and near-miss rates, path efficiency, heading jerk, density/flow, inter-agent distances — and align them with the ETH/UCY ground-truth conventions.
+- Author the scenario generators (`generate_pure_yamls.py`, `generate_central_tunnel_yamls.py`, `generate_delta_yamls.py`) including the proportional OAT scaling, clamping logic, and per-agent BT XML emission.
+- Wire up the recording workflow (`run_recording.py`) and the ROS 2 service plumbing.
+- Diagnose the `configuration: 2` confound in the café runs and design the deterministic mode 1 fix that underpins the central tunnel and delta results.
+- Draft and consolidate the project documentation in this README.
+
+The underlying HuNavSim / hunav_gazebo_wrapper / lightsfm stack is the work of the original authors at robotics-upo (see citations in `src/hunav_sim/README.md`).
+
